@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% load static %}
+{% for article in articles %}
+    <p>{{ article.title }}</p>
+{% endfor %}

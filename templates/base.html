@@ -1,0 +1,52 @@
+{% load static %}
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}{% endblock %}</title>
+    {% block head %}{% endblock head %}
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        #wrapper {
+            min-height: 100%;
+            margin-bottom: -60px;
+        }
+
+        .footer {
+            background-color: #6f42c1;
+            color: white;
+            height: 60px;
+        }
+        .custom-navbar {
+            background-color: #6f42c1;
+        }
+        .custom-navbar a,
+        .custom-navbar a:link,
+        .custom-navbar a:visited {
+            color: white;
+        }
+        .custom-navbar a:hover,
+        .custom-navbar a:active {
+            color: #e4e4e4;
+        }
+    </style>
+{#    <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">#}
+    <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
+</head>
+
+<body>
+    {% include 'header.html' %}
+    <div id="wrapper">
+        {% block content %}{% endblock content %}
+    </div>
+    {% include 'footer.html' %}
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="{% static 'bootstrap/js/bootstrap.min.js' %}"></script>
+{#    {% include 'back_to_top_func.html' %}#}
+    {% block script %}{% endblock script %}
+</body>
+</html>
