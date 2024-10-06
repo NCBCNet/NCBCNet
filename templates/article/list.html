@@ -1,5 +1,17 @@
 {% extends 'base.html' %}
 {% load static %}
-{% for article in articles %}
-    <p>{{ article.title }} + Aritcle</p>
-{% endfor %}
+{% block title %}
+    NCNet-南城网 论坛
+{% endblock %}
+{% block content %}
+    <div class="container mt-5">
+        {% for article in articles %}
+            <br>
+            <br>
+            <p>{{ article.title }}</p>
+            <a class="btn btn-primary" href="{% url 'article:article_detail' article.id %}">文章详情</a>
+            <br>
+            <br>
+        {% endfor %}
+    </div>
+{% endblock %}

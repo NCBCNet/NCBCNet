@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'article',
     'study',
     'file_save',
+    'usermanage',
 ]
 
 MIDDLEWARE = [

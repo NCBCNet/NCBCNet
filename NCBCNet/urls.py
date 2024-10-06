@@ -20,7 +20,8 @@ from server import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    re_path('',views.index,name='index'),
+    path('',views.index),
     path('server/', include('server.urls', namespace='server')),
     path('article/',include('article.urls',namespace='article')),
+    path('usermanage/',include('usermanage.urls',namespace='usermanage')),
 ]
