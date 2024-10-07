@@ -4,11 +4,9 @@
     <div class="container">
         <div class="row">
             <div class="col-12 mt-5">
-                <div class="col-md-4">用户名:{{ user.username }}</div>
+                <div class="col-md-4"><h1>{{ user.username }}</h1></div>
                 <br>
                 {% if profile.avatar %}
-                    <div class="col-md-4">头像</div>
-                    <br>
                     <img src="{{profile.avatar.url}}" style="max-width: 20%; border-radius: 15%;" class="col-md-4" alt="{{ user.username }}">
                 {% else %}
                     <h5 class="col-md-4">暂无头像</h5>
@@ -17,9 +15,9 @@
                 <br>
                 <form method="POST" action="." enctype="multipart/form-data">
                     {% csrf_token %}
-                    <div class="form-group">
-                        <label for="avatar">上传头像</label>
-                        <input type="file" class="form-control-file" id="avatar" name="avatar">
+                    <div class="input-group">
+                        <label for="avatar" class="input-group-text">上传头像</label>
+                        <input type="file" class="form-control" id="avatar" name="avatar">
                     </div>
                     <br>
                     <div class="form-group">

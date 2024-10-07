@@ -27,8 +27,8 @@
                         浏览量: {{ article.total_views }}
                     </div>
                 </div>
-                <div class="col-12">
-                    <p>{{ article.content | safe }}</p>
+                <div class="col-12" style="word-wrap: break-word;">
+                    {{ article.content | safe }}
                 </div>
                 
                 <hr>
