@@ -15,6 +15,16 @@
                     </div>
                     <br>
                     <div class="form-group">
+                        <label for="column">栏目</label>
+                        <select class="form-control" id="column" name="column">
+                            <option value="none">请选择栏目...</option>
+                            {% for column in columns %}
+                                <option value="{{ column.id }}">{{ column }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <br>
+                    <div class="form-group">
                         <label for="content" class="form-label">文章内容</label>
                         <textarea type="text" class="form-control" id="content" name="content" rows="12"></textarea>
                     </div>

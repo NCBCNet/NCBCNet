@@ -43,20 +43,41 @@
                 <hr>
             {% endif %}
         {% endif %}
-        <div class="col-9 mt-2">
-            {% for article in articles %}
-                <br>
-                <p>{{ article.title }}</p>
-                <a class="btn btn-primary" href="{% url 'article:article_detail' article.id %}">文章详情</a>
-                <span>
-                    <small class="col align-self-end" style="color: gray;">
-                        浏览: {{ article.total_views }}
-                    </small>
-                </span>
-                <br>
-                <br>
-            {% endfor %}
-        </div>
+        <div class="row mt-2">
+        {% for article in articles %}
+            <div class="col-12">
+                {% if article.column %}
+                    <button type="button" class="btn btn-sm mb-2 btn-success">
+                        {{ article.column }}
+                    </button>
+                {% endif %}
+                <h4>
+                    <b>
+                        <a href="{% url 'article:article_detail' article.id %}" style="color: black;">
+                            {{ article.title }}
+                        </a>
+                    </b>
+                </h4>
+                <div>
+                    <p style="color: gray;">
+                        {{ article.content|slice:'100' }}...
+                    </p>
+                </div>
+                <p>
+                    <span style="color: green;">
+                        {{ article.total_views }} 浏览&nbsp;&nbsp;&nbsp;
+                    </span>
+                    <span style="color: blue;">
+                        {{ article.created|date:'Y-m-d' }} 发布&nbsp;&nbsp;&nbsp;
+                    </span>
+                    <span style="color: darkred;">
+                        {{ article.updated|date:'Y-m-d' }} 更新
+                    </span>
+                </p>
+                <hr>
+            </div>
+        {% endfor %}
+    </div>
         <div class="pagination row">
             <div class="m-auto">
             <span class="step-links">

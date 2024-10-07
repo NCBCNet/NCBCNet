@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from .models import Article
+from .models import Article, ArticleColumn
 import markdown
 from django.shortcuts import redirect
 from django.http import HttpResponse
@@ -64,13 +64,16 @@ def article_create(request):
         if form.is_valid():
             new_article = form.save(commit=False)
             new_article.author = User.objects.get(id=request.user.id)
+            if request.POST['column'] != 'none':
+                new_article.column = ArticleColumn.objects.get(id=request.POST['column'])
             new_article.save()
             return redirect('article:list')
         else:
             return HttpResponse(form.errors, status=400)
     else:
         article_form = ArticlePostForm()
-        context = {'article_form': article_form}
+        columns = ArticleColumn.objects.all()
+        context = {'article_form': article_form,'columns':columns}
         return render(request, 'article/create_article.html', context)
 
 
@@ -83,13 +86,18 @@ def article_update(request, id):
             if form.is_valid():
                 article.title = request.POST['title']
                 article.content = request.POST['content']
+                if request.POST['column'] != 'none':
+                    article.column = ArticleColumn.objects.get(id=request.POST['column'])
+                else:
+                    article.column = None
                 article.save()
                 return redirect('article:article_detail', id=id)
             else:
                 return HttpResponse("表单有误")
         else:
             article_form = ArticlePostForm()
-            context = {'article_form': article_form, 'article': article}
+            columns = ArticleColumn.objects.all()
+            context = {'article_form': article_form, 'article': article,'columns':columns}
             return render(request, 'article/updata_article.html', context)
     else:
         return HttpResponse("你没有权限")
