@@ -1,65 +1,108 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from django.template.context_processors import request
-
 from .models import Article
 import markdown
 from django.shortcuts import redirect
 from django.http import HttpResponse
 from .forms import ArticlePostForm
 from django.contrib.auth.models import User
+from django.core.paginator import Paginator
+from django.db.models import Q
+from comment.models import Comment
+
 # Create your views here.
 
 def article_list(request):
-    articles = Article.objects.all()
-    context = {'articles':articles}
-    return render(request, 'article/list.html',context)
+    search = request.GET.get('search')
+    order = request.GET.get('order')
+    if search:
+        if order == 'total_views':
+            article_list = Article.objects.filter(
+                Q(title__icontains=search) |
+                Q(content__icontains=search)
+            ).order_by('-total_views')
+        else:
+            article_list = Article.objects.filter(
+                Q(title__icontains=search) |
+                Q(content__icontains=search)
+            )
+    else:
+        search = ''
+        if order == 'total_views':
+            article_list = Article.objects.order_by('-total_views')
+        else:
+            article_list = Article.objects.all()
 
-def article_detail(request,id):
+    paginator = Paginator(article_list, 10)
+    page = request.GET.get('page')
+    articles = paginator.get_page(page)
+
+    context = {"articles":articles,'order':order,'search':search}
+    return render(request, 'article/list.html', context)
+
+
+def article_detail(request, id):
     article = Article.objects.get(id=id)
-    article.content = markdown.markdown(article.content,
-                                extensions=[
-                                    'markdown.extensions.extra',
-                                    'markdown.extensions.codehilite',
-                                ]
-                                )
-    context = {'article':article}
-    return render(request,'article/detail.html',context)
+    comments = Comment.objects.filter(article=id)
+    article.total_views += 1
+    article.save(update_fields=['total_views'])
+    md = markdown.Markdown(extensions=[
+                                            'markdown.extensions.extra',
+                                            'markdown.extensions.codehilite',
+                                            'markdown.extensions.toc',
+                                        ]
+                                        )
+    article.content = md.convert(article.content)
+    context = {'article': article,'toc':md.toc,'comments':comments}
+    return render(request, 'article/detail.html', context)
 
+
+@login_required(login_url='usermanage:login')
 def article_create(request):
     if request.method == 'POST':
         form = ArticlePostForm(data=request.POST)
         if form.is_valid():
             new_article = form.save(commit=False)
-            new_article.author = User.objects.get(id=1)
+            new_article.author = User.objects.get(id=request.user.id)
             new_article.save()
             return redirect('article:list')
         else:
             return HttpResponse(form.errors, status=400)
     else:
         article_form = ArticlePostForm()
-        context = {'article_form':article_form}
-        return render(request,'article/create_article.html',context)
+        context = {'article_form': article_form}
+        return render(request, 'article/create_article.html', context)
 
-def article_update(request,id):
+
+@login_required(login_url='usermanage:login')
+def article_update(request, id):
     article = Article.objects.get(id=id)
-    if request.method == 'POST':
-        form = ArticlePostForm(data=request.POST)
-        if form.is_valid():
-            article.title = request.POST['title']
-            article.content = request.POST['content']
-            article.save()
-            return redirect('article:article_detail',id=id)
+    if request.user == article.author:
+        if request.method == 'POST':
+            form = ArticlePostForm(data=request.POST)
+            if form.is_valid():
+                article.title = request.POST['title']
+                article.content = request.POST['content']
+                article.save()
+                return redirect('article:article_detail', id=id)
+            else:
+                return HttpResponse("表单有误")
         else:
-            return HttpResponse("表单有误")
+            article_form = ArticlePostForm()
+            context = {'article_form': article_form, 'article': article}
+            return render(request, 'article/updata_article.html', context)
     else:
-        article_form = ArticlePostForm()
-        context = {'article_form':article_form,'article':article}
-        return render(request,'article/updata_article.html',context)
+        return HttpResponse("你没有权限")
 
-def article_delete(request,id):
-    if request.method == 'POST':
-        article = Article.objects.get(id=id)
-        article.delete()
-        return redirect('article:list')
+
+@login_required(login_url='usermanage:login')
+def article_delete(request, id):
+    article = Article.objects.get(id=id)
+    if request.user == article.author:
+        if request.method == 'POST':
+            article.delete()
+            return redirect('article:list')
+        else:
+            return HttpResponse('仅允许POST请求')
     else:
-        return HttpResponse('仅允许POST请求')
+        return HttpResponse("你没有权限")

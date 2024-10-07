@@ -6,24 +6,87 @@
 {% block content %}
     <div class="container">
         <div class="row">
-            <h1 class="col-12 mt-4 mb-4">{{ article.title }}</h1>
-            <div class="col-12 alert alert-primary">作者: {{ article.author }}
-                . <a href="#" onclick="confirm_delete()">删除</a>
-                . <a href="{% url 'article:article_update' article.id %}">编辑</a>
-                <form
-                        style="display:none;"
-                        id="safe_delete"
-                        action="{% url 'article:article_delete' article.id %}"
-                        method="POST"
-                >
-                    {% csrf_token %}
-                    <button type="submit">发送</button>
-                </form>
+            <div class="col-9">
+                <h1 class="col-12 mt-4 mb-4">{{ article.title }}</h1>
+                <div class="col-12 alert alert-primary">
+                    <div>
+                        作者: {{ article.author }}
+                        {% if user == article.author %}
+                            . <a href="#" onclick="confirm_delete()">删除</a>
+                            . <a href="{% url 'article:article_update' article.id %}">编辑</a>
+                            <form style="display:none;"
+                                    id="safe_delete"
+                                    action="{% url 'article:article_delete' article.id %}"
+                                    method="POST">
+                                {% csrf_token %}
+                                <button type="submit">发送</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                    <div>
+                        浏览量: {{ article.total_views }}
+                    </div>
+                </div>
+                <div class="col-12">
+                    <p>{{ article.content | safe }}</p>
+                </div>
+                
+                <hr>
+                {% if user.is_authenticated %}
+                    <div>
+                        <form action="{% url 'comment:post_comment' article.id %}" method="POST">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="content">
+                                    <strong>
+                                        我也要发言：
+                                    </strong>
+                                </label>
+                                <textarea
+                                        type="text"
+                                        class="form-control"
+                                        id="content"
+                                        name="content"
+                                        rows="2"></textarea>
+                            </div>
+                            <!-- 提交按钮 -->
+                            <button type="submit" class="btn btn-primary mt-2">发送</button>
+                        </form>
+                    </div>
+                    <br>
+                {% else %}
+                    <br>
+                    <h5>
+                        请<a href="{% url 'usermanage:login' %}">登录</a>后回复
+                    </h5>
+                    <br>
+                {% endif %}
+                <!-- 显示评论 -->
+                <h4>共有{{ comments.count }}条评论</h4>
+                <div>
+                    {% for comment in comments %}
+                        <hr>
+                        <p>
+                            <strong style="color: pink">
+                                {{ comment.user }}
+                            </strong> 于
+                            <span style="color: green">
+                                {{ comment.created|date:"Y-m-d H:i:s" }}
+                            </span> 时说：
+                        </p>
+                        <pre style="font-family: inherit; font-size: 1em;">{{ comment.content }}</pre>
+                    {% endfor %}
+                </div>
             </div>
-            <div class="col-12">
-                <p>{{ article.content | safe }}</p>
+            <div class="col-3 mt-4">
+            <h4><strong>目录</strong></h4>
+            <hr>
+            <div>
+                {{ toc | safe }}
             </div>
         </div>
+        </div>
+    </div>
     </div>
     <script>
         // 删除文章的函数
