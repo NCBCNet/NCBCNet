@@ -2,15 +2,22 @@
 {% load static %}
 {% block content %}
     <div class="container">
-    <div class="col-12">
-        <br>
+    <div class="col-12 mt-4">
         <h1>关于</h1>
-        <img src="{% static 'server/图标.png' %}" alt="">
         <br>
-        <p></p>
+        <img src="{% static 'server/图标.png' %}" alt="" width="100" height="100">
+        <br>
+        <br>
+        <p>重庆南城巴川是一所年轻的学校。该网站有在校学生制作，维护权管理权仅属于该项目式小组。</p>
+        <p>制作人员:</p>
+        <p><small>TBHLLL，LeoSmith</small></p>
+        <br>
         <hr>
-        <p></p>
-        <img src="{% static 'server/NCN.jpg' %}" alt="">        
+        <h4>吉祥物设计</h4>
+        <p>该设计是由小组内其他成员负责的，编写此页面的人什么的不知道（</p>
+        <div class="col-5">
+            <img src="{% static 'server/NCN.jpg' %}" alt="" width="300"  id="contain">
+        </div>       
     </div>
     </div>
 {% endblock %}
