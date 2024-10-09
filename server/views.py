@@ -8,3 +8,6 @@ def index(request):
 
 def easter_egg_1(request):
     return render(request,'server/easter_egg_1.html')
+
+def about(request):
+        return render(request,'server/about.html')
