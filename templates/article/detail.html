@@ -30,7 +30,17 @@
                 <div class="col-12" style="word-wrap: break-word;">
                     {{ article.content | safe }}
                 </div>
-                
+                <div style="text-align: center;" class="mt-4">
+                    <button class="btn btn-outline-danger" type="button" onclick="validate_is_like('{% url 'article:increase_likes' article.id %}',{{ article.id }},{{ article.likes }})">
+                        <span>点赞</span>
+                        <span>
+                            <i class="fas fa-heart"></i>
+                        </span>
+                        <span id="likes_number">
+                            {{ article.likes }}
+                        </span>
+                    </button>
+                </div>
                 <hr>
                 {% if user.is_authenticated %}
                     <div>
@@ -87,7 +97,8 @@
         </div>
         </div>
     </div>
-    </div>
+{% endblock %}
+{% block script %}
     <script>
         // 删除文章的函数
         function confirm_delete() {
@@ -104,6 +115,60 @@
                     layer.close(index);
                 },
             })
+        }
+    </script>
+    <script src="{% static 'csrf.js' %}"></script>
+    <script>
+        function  validate_is_like(url,id,likes) {
+            let storage = window.localStorage;
+            const storage_str_data = storage.getItem("NCNet_data");
+            let storage_json_data = JSON.parse(storage_str_data);
+            if (!storage_json_data) {
+                storage_json_data = {}
+            }
+            const status = check_status(storage_json_data,id);
+            if (status) {
+                layer.msg('已经点过赞了哟~');
+                return;
+            } else {
+                $('span#likes_number').text(likes+1).css('color','#dc3545');
+            }
+            $.post(
+                url,
+                {},
+                function (result) {
+                    if (result==='success') {
+                        try {
+                            storage_json_data[id] = true;
+                        } catch (e) {
+                            window.localStorage.clear();
+                        }
+                        const d = JSON.stringify(storage_json_data)
+                        try {
+                            storage.setItem("NCNet_data",d);
+                        }catch (e) {
+                            if (e.code===22) {
+                                window.localStorage.clear()
+                                storage.setItem("NCNet_data",d);
+                            }
+                        }
+                    } else {
+                        layer.msg("与服务器通信失败..过一会儿再试试呗~")
+                    }
+                }
+            )
+        }
+        function check_status(data,id) {
+            try {
+                if(id in data && data[id]) {
+                    return true;
+                }else{
+                    return false;
+                }
+            }catch (e){
+                window.localStorage.clear()
+                return flase;
+            }
         }
     </script>
 {% endblock %}

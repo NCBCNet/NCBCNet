@@ -1,5 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
+from django.views import View
+
 from .models import Article, ArticleColumn
 import markdown
 from django.shortcuts import redirect
@@ -115,3 +117,11 @@ def article_delete(request, id):
             return HttpResponse('仅允许POST请求')
     else:
         return HttpResponse("你没有权限")
+
+
+class IncreaseLikesView(View):
+    def post(self, request, *args, **kwargs):
+        article = Article.objects.get(id=kwargs.get('id'))
+        article.likes +=1
+        article.save()
+        return HttpResponse('success')

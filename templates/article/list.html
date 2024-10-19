@@ -45,6 +45,11 @@
         {% endif %}
         <div class="row mt-2">
         {% for article in articles %}
+            {% if article.avatar %}
+                <div class="col-3">
+                    <img src="{{ article.avatar.url }}" alt="avatar" style="max-width: 100%;border-radius: 20px">
+                </div>
+            {% endif %}
             <div class="col-12">
                 {% if article.column %}
                     <button type="button" class="btn btn-sm mb-2 btn-success">
@@ -53,13 +58,13 @@
                 {% endif %}
                 <h4>
                     <b>
-                        <a href="{% url 'article:article_detail' article.id %}" style="color: black;">
+                        <a href="{% url 'article:article_detail' article.id %}" style="color: black;word-wrap: break-word;">
                             {{ article.title }}
                         </a>
                     </b>
                 </h4>
                 <div>
-                    <p style="color: gray;">
+                    <p style="color: gray;word-wrap: break-word;">
                         {{ article.content|slice:'100' }}...
                     </p>
                 </div>
@@ -74,7 +79,7 @@
                         {{ article.updated|date:'Y-m-d' }} 更新
                     </span>
                 </p>
-                <hr>
+                <hr style="width: 100%;"/>
             </div>
         {% endfor %}
     </div>

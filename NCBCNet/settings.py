@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'usermanage',
     'comment',
     'taggit',
+    'mptt',
 ]
 
 MIDDLEWARE = [

@@ -7,11 +7,16 @@
     <div class="container mt-5">
         <div class="row">
             <div class="col-12">
-                <form method="POST" action=".">
+                <form method="POST" action="." enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="form-group">
                         <label for="title" class="form-label">文章标题</label>
                         <input type="text" class="form-control" id="title" name="title">
+                    </div>
+                    <br>
+                    <div class="form-group">
+                        <label for="avatar">标题图</label>
+                        <input type="file" class="form-control-file" name="avatar" id="avatar">
                     </div>
                     <br>
                     <div class="form-group">

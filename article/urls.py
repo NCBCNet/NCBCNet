@@ -10,4 +10,5 @@ urlpatterns = [
     path('article_create/',views.article_create, name='article_create'),
     path('article_update/<int:id>/', views.article_update, name='article_update'),
     path('article_delete/<int:id>/', views.article_delete, name='article_delete'),
+    path('increase_likes/<int:id>/',views.IncreaseLikesView.as_view(),name='increase_likes')
 ]
