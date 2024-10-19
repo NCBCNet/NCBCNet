@@ -67,6 +67,7 @@ def article_create(request):
             if request.POST['column'] != 'none':
                 new_article.column = ArticleColumn.objects.get(id=request.POST['column'])
             new_article.save()
+            form.save_m2m()
             return redirect('article:list')
         else:
             return HttpResponse(form.errors, status=400)

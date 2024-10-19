@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'file_save',
     'usermanage',
     'comment',
+    'taggit',
 ]
 
 MIDDLEWARE = [
