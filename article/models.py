@@ -28,7 +28,7 @@ class Article(models.Model):
             (x,y) = image.size
             new_x = 400
             new_y = int(new_x*y/x)
-            resized_image = image.resize((new_x,new_y),Image.ANTIALIAS)
+            resized_image = image.resize((new_x,new_y),Image.ANTIALIAS) # Pillow新版无法使用
             resized_image.save(self.avatar.path)
         return article
     column = models.ForeignKey(ArticleColumn,null=True,blank=True,on_delete=models.CASCADE,related_name='article')

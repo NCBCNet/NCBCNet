@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views import View
+from pygments.styles.dracula import comment
 
 from .models import Article, ArticleColumn
 import markdown
@@ -11,6 +12,7 @@ from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db.models import Q
 from comment.models import Comment
+from comment.forms import CommentForm
 
 # Create your views here.
 
@@ -48,6 +50,7 @@ def article_detail(request, id):
     comments = Comment.objects.filter(article=id)
     article.total_views += 1
     article.save(update_fields=['total_views'])
+    comment_form = CommentForm()
     md = markdown.Markdown(extensions=[
                                             'markdown.extensions.extra',
                                             'markdown.extensions.codehilite',
@@ -55,14 +58,14 @@ def article_detail(request, id):
                                         ]
                                         )
     article.content = md.convert(article.content)
-    context = {'article': article,'toc':md.toc,'comments':comments}
+    context = {'article': article,'toc':md.toc,'comments':comments,'comment_form':comment_form,}
     return render(request, 'article/detail.html', context)
 
 
 @login_required(login_url='usermanage:login')
 def article_create(request):
     if request.method == 'POST':
-        form = ArticlePostForm(data=request.POST)
+        form = ArticlePostForm(request.POST,request.FILES)
         if form.is_valid():
             new_article = form.save(commit=False)
             new_article.author = User.objects.get(id=request.user.id)

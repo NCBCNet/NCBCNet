@@ -3,6 +3,7 @@
 {% block title %}
     网页详情
 {% endblock %}
+{% load mptt_tags %}
 {% block content %}
     <div class="container">
         <div class="row">
@@ -30,7 +31,7 @@
                 <div class="col-12" style="word-wrap: break-word;">
                     {{ article.content | safe }}
                 </div>
-                <div style="text-align: center;" class="mt-4">
+                <div class="mt-4">
                     <button class="btn btn-outline-danger" type="button" onclick="validate_is_like('{% url 'article:increase_likes' article.id %}',{{ article.id }},{{ article.likes }})">
                         <span>点赞</span>
                         <span>
@@ -52,12 +53,16 @@
                                         我也要发言：
                                     </strong>
                                 </label>
-                                <textarea
-                                        type="text"
-                                        class="form-control"
-                                        id="content"
-                                        name="content"
-                                        rows="2"></textarea>
+{#                                <textarea#}
+{#                                        type="text"#}
+{#                                        class="form-control"#}
+{#                                        id="content"#}
+{#                                        name="content"#}
+{#                                        rows="2"></textarea>#}
+                                <div>
+                                    {{ comment_form.media }}
+                                    {{ comment_form.content }}
+                                </div>
                             </div>
                             <!-- 提交按钮 -->
                             <button type="submit" class="btn btn-primary mt-2">发送</button>
@@ -84,7 +89,7 @@
                                 {{ comment.created|date:"Y-m-d H:i:s" }}
                             </span> 时说：
                         </p>
-                        <pre style="font-family: inherit; font-size: 1em;">{{ comment.content }}</pre>
+                        <pre style="font-family: inherit; font-size: 1em;">{{ comment.content | safe}}</pre>
                     {% endfor %}
                 </div>
             </div>
@@ -170,5 +175,8 @@
                 return flase;
             }
         }
+    </script>
+    <script>
+        $(".django-ckeditor-widget").removeAttr('style');
     </script>
 {% endblock %}
