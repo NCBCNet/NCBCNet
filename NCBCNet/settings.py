@@ -14,13 +14,16 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+file_path = 'SECRET'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-d4-czwsrk1+a!9=*b@)we*%m9a&vdn3n3v$g%7xx33iahcyxek'
+with open(file_path, 'r') as f:
+    file_content =f.read()
+    print(file_content)
+    SECRET_KEY = file_content
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
