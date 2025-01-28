@@ -1,7 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views import View
-from pygments.styles.dracula import comment
 
 from .models import Article, ArticleColumn
 import markdown
@@ -19,23 +18,30 @@ from comment.forms import CommentForm
 def article_list(request):
     search = request.GET.get('search')
     order = request.GET.get('order')
+    column = request.GET.get('column')
+    tag = request.GET.get('tag')
+
+    article_list = Article.objects.all()
+
     if search:
-        if order == 'total_views':
-            article_list = Article.objects.filter(
-                Q(title__icontains=search) |
-                Q(content__icontains=search)
-            ).order_by('-total_views')
-        else:
-            article_list = Article.objects.filter(
-                Q(title__icontains=search) |
-                Q(content__icontains=search)
-            )
+        article_list = article_list.filter(
+            Q(title__icontains=search) |
+            Q(body__icontains=search)
+        )
     else:
         search = ''
-        if order == 'total_views':
-            article_list = Article.objects.order_by('-total_views')
-        else:
-            article_list = Article.objects.all()
+
+        # 栏目查询集
+    if column is not None and column.isdigit():
+        article_list = article_list.filter(column=column)
+
+        # 标签查询集
+    if tag and tag != 'None':
+        article_list = article_list.filter(tags__name__in=[tag])
+
+        # 查询集排序
+    if order == 'total_views':
+        article_list = article_list.order_by('-total_views')
 
     paginator = Paginator(article_list, 10)
     page = request.GET.get('page')
@@ -96,6 +102,10 @@ def article_update(request, id):
                     article.column = ArticleColumn.objects.get(id=request.POST['column'])
                 else:
                     article.column = None
+                if request.POST['tags'] != '':
+                    pass
+                else:
+                    pass
                 article.save()
                 return redirect('article:article_detail', id=id)
             else:
@@ -103,7 +113,11 @@ def article_update(request, id):
         else:
             article_form = ArticlePostForm()
             columns = ArticleColumn.objects.all()
-            context = {'article_form': article_form, 'article': article,'columns':columns}
+            tagson = ''
+            for tag in article.tags.all():
+                tagson += tag.name + ','
+            tagson = tagson[:-1]
+            context = {'article_form': article_form, 'article': article,'columns':columns,"tags":tagson}
             return render(request, 'article/updata_article.html', context)
     else:
         return HttpResponse("你没有权限")

@@ -35,6 +35,7 @@
 {#    <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">#}
     <link rel="stylesheet" href="{% static 'md_css/monokai.css' %}">
     <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.14.0/css/all.min.css">
     
 </head>
 
@@ -49,7 +50,7 @@
     <script src="{% static 'bootstrap/js/bootstrap.min.js' %}"></script>
     <script src="{% static 'layer/layer.js' %}"></script>
     <script src="{% static 'ckeditor/ckeditor/plugins/prism/lib/prism/prism_patched.min.js' %}"></script>
-{#    {% include 'back_to_top_func.html' %}#}
-    {% block script %}{% endblock script %}
+    {% include 'back_to_top_func.html' %}
 </body>
+{% block script %}{% endblock script %}
 </html>

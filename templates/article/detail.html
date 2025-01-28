@@ -1,9 +1,23 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}
-    网页详情
+    {{ article.title }}
 {% endblock %}
 {% load mptt_tags %}
+{% load article_filters_and_tags %}
+{% block head %}
+    <style>
+    .sidebar{
+        will-change: min-height;
+    }
+
+    .sidebar__inner{
+        transform: translate(0, 0);
+        transform: translate3d(0, 0, 0);
+        will-change: position, transform;
+    }
+    </style>
+{% endblock %}
 {% block content %}
     <div class="container">
         <div class="row">
@@ -86,16 +100,16 @@
                                         {% else %}
                                         col-12
                                         {% endif %}">
-                                <hr>
+                                <hr> <!-- 子评论不应有hr -->
                                 <p>
-                                    <strong style="color: pink;">
+                                    <strong style="color: cornflowerblue;">
                                         {{ comment.user }}
                                     </strong>
 
                                     {% if comment.reply_to %}
                                         <i class="far fa-arrow-alt-circle-right"
-                                           style="color: cornflowerblue;"></i>
-                                        <strong style="color: pink;">
+                                           style="color: mediumpurple;"></i>
+                                        <strong style="color: cornflowerblue;">
                                             {{ comment.reply_to }}
                                         </strong>
                                     {% endif %}
@@ -103,21 +117,23 @@
                                 <div>{{ comment.content | safe }}</div>
                                 <div>
                                     <span style="color: gray">
-                                        {{ comment.created|date: "Y-m-d H:i" }}
+                                        {{ comment.created|date:"Y-m-d H:i" }}
                                     </span>
                                     {% if user.is_authenticated %}
-                                        <button type="button" class="btn btn-light btn-sm text-muted" onclick="load_model({{ article.id }},{{ comment.id }})">回复</button>
+                                        <button type="button" class="btn btn-light btn-sm text-muted" onclick="load_modal({{ article.id }},{{ comment.id }})">回复</button>
                                     {% else %}
                                         <a class="btn btn-light btn-sm text-muted" href="{% url 'usermanage:login' %}">回复</a>
                                     {% endif %}
                                 </div>
+                            
+                                <!-- Modal -->
                                 <div class="modal fade" id="comment_{{ comment.id }}" tabindex="-1" role="dialog" aria-labelledby="CommentModelCenter" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
                                         <div class="modal-content" style="height: 480px">
                                             <div class="modal-header">
                                                 <h5 class="modal-title" id="exampleModalCenterTitle">回复 {{ comment.user }}: </h5>
                                             </div>
-                                            <div class="modal-content" id="modal_content_{{ comment.id }}"></div> <!- 不到是body还是content -->
+                                            <div class="modal-content" id="modal_content_{{ comment.id }}"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -131,21 +147,30 @@
                     {% endrecursetree %}
                 </div>
             </div>
-            <div class="col-3 mt-4">
-            <h4><strong>目录</strong></h4>
-            <hr>
-            <div>
-                {{ toc | safe }}
+            <div id="sidebar" class="sidebar col-3 mt-lg-4">
+                    <div class="sidebar__inner">
+                        <h4><strong>目录</strong></h4>
+                        <hr>
+                        <div>
+                            {{ toc | safe }}
+                        </div>
+                    </div>
             </div>
-        </div>
         </div>
     </div>
 {% endblock %}
 {% block script %}
+    <script src="{% static 'sticky_sidebar/jquery.sticky-sidebar.min.js' %}"></script>
+    <script type="text/javascript">
+        $('#sidebar').stickySidebar({
+            topSpacing: 80,
+            bottomSpacing: 20,
+        });
+    </script>
     <script>
         // 加载 modal
         function load_modal(article_id, comment_id) {
-            let modal_content = '#modal_cotent_' + comment_id;
+            let modal_content = '#modal_content_' + comment_id;
             let modal_id = '#comment_' + comment_id;
             
             // 加载编辑器
@@ -154,12 +179,10 @@
                     article_id + 
                     '/' + 
                     comment_id + 
-                    '"' + 
-                    ' frameborder="0" style="width: 100%; height: 100%;" id="iframe_' + 
-                    comment_id + 
-                    '"></iframe>';
+                    '/"' + 
+                    ' frameborder="0" style="width: 100%; height: 480px" ></iframe>';
                 $(modal_content).append(content);
-            };
+            }
     
             $(modal_id).modal('show');
         }

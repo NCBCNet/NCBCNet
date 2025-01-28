@@ -11,7 +11,13 @@ https://docs.djangoproject.com/zh-hans/5.1/#:~:text=Django%20%E6%9C%89%E4%B8%B0%
 https://github.com/stacklens/django_blog_tutorial
 
 
-
+```
 python.exe -m pip install --upgrade pip
+```
 
+```
 python.exe manage.py runserver localhost:8080
+```
+
+
+1. 消息与通知功能

@@ -15,13 +15,13 @@
                     </div>
                     <br>
                     <div class="form-group">
-                        <label for="avatar">标题图</label>
-                        <input type="file" class="form-control-file" name="avatar" id="avatar">
+                        <label for="avatar" class="form-label">标题图</label>
+                        <input type="file" class="form-control" name="avatar" id="avatar">
                     </div>
                     <br>
                     <div class="form-group">
                         <label for="column">栏目</label>
-                        <select class="form-control" id="column" name="column">
+                        <select class="form-select" id="column" name="column">
                             <option value="none">请选择栏目...</option>
                             {% for column in columns %}
                                 <option value="{{ column.id }}">{{ column }}</option>

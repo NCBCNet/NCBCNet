@@ -1,8 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from pydantic.v1 import constr
-from pygments.styles.dracula import comment
+
 
 from article.models import Article
 from .forms import CommentForm

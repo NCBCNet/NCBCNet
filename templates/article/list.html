@@ -3,18 +3,19 @@
 {% block title %}
     论坛
 {% endblock %}
+{% load article_filters_and_tags %}
 {% block content %}
     <div class="container">
         <div class="col mt-5">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
-                        <a href="{% url 'article:list' %}?search={{ search }}">
+                        <a href="{% url 'article:list' %}?search={{ search }}&column={{ column }}&tag={{ tag }}">
                             最新
                         </a>
                     </li>
                     <li class="breadcrumb-item">
-                        <a href="{% url 'article:list' %}?order=total_views&search={{ search }}">
+                        <a href="{% url 'article:list' %}?order=total_views&search={{ search }}&column={{ column }}&tag={{ tag }}">
                             最热
                         </a>
                     </li>
@@ -47,16 +48,22 @@
         {% for article in articles %}
             {% if article.avatar %}
                 <div class="col-3">
-                    <img src="{{ article.avatar.url }}" alt="avatar" style="max-width: 100%;border-radius: 20px">
+                    <img src="{{ article.avatar.url }}" alt="avatar" style="max-width: 100%;border-radius: 20px;max-height: 90%">
                 </div>
             {% endif %}
-{#            # 图片排版有问题#}
-            <div class="col-12">
+            <div class="col-9">
                 {% if article.column %}
-                    <button type="button" class="btn btn-sm mb-2 btn-success">
+                    <a role="button" class="btn btn-sm mb-2 btn-success" href="{% url 'article:list' %}?column={{ article.column.id }}">
                         {{ article.column }}
-                    </button>
+                    </a>
                 {% endif %}
+                <span>
+                    {%  for tag in article.tags.all %}
+                        <a href="{% url 'article:list' %}?tag={{ tag }}" class="badge badge-secondary" style="color: gray;">
+                            {{ tag }}
+                        </a>
+                    {% endfor %}
+                </span>
                 <h4>
                     <b>
                         <a href="{% url 'article:article_detail' article.id %}" style="color: black;word-wrap: break-word;">
@@ -70,27 +77,30 @@
                     </p>
                 </div>
                 <p>
-                    <span style="color: green;">
-                        {{ article.total_views }} 浏览&nbsp;&nbsp;&nbsp;
+                    <span style="color: mediumpurple;">
+                        <i class="fas fa-eye" style="color: mediumpurple;"></i>
+                        {{ article.total_views }} &nbsp;&nbsp;&nbsp;
                     </span>
-                    <span style="color: blue;">
-                        {{ article.created|date:'Y-m-d' }} 发布&nbsp;&nbsp;&nbsp;
+                    <span style="color: cornflowerblue;">
+                        <i class="fas fa-comments" style="color: cornflowerblue;"></i>
+                        {{ article.comments.count }} &nbsp;&nbsp;&nbsp;
                     </span>
-                    <span style="color: darkred;">
-                        {{ article.updated|date:'Y-m-d' }} 更新
+                    <span style="color: mediumpurple;">
+                        <i class="fas fa-clock" style="color: mediumpurple;"></i>
+                        {{ article.created|timesince_zh }} &nbsp;&nbsp;&nbsp;
                     </span>
                 </p>
-                <hr style="width: 100%;"/>
             </div>
+            <hr style="width: 100%;"/>
         {% endfor %}
     </div>
         <div class="pagination row">
             <div class="m-auto">
             <span class="step-links">
                 {% if articles.has_previous %}
-                    <a href="?page=1&order={{ order }}&search={{ search }}" class="btn btn-success">&laquo; 1</a>
+                    <a href="?page=1&order={{ order }}&search={{ search }}&column={{ column }}&tag={{ tag }}" class="btn btn-success">&laquo; 1</a>
                     <span>...</span>
-                    <a href="?page={{ articles.previous_page_number }}&order={{ order }}&search={{ search }}" class="btn btn-secondary">
+                    <a href="?page={{ articles.previous_page_number }}&order={{ order }}&search={{ search }}&column={{ column }}&tag={{ tag }}" class="btn btn-secondary">
                     {{ articles.previous_page_number }}
                 </a>
                 {% endif %}
@@ -98,11 +108,11 @@
                     {{ articles.number }}
                 </span>
                 {% if articles.has_next %}
-                    <a href="?page={{ articles.next_page_number }}&order={{ order }}&search={{ search }}" class="btn btn-secondary">
+                    <a href="?page={{ articles.next_page_number }}&order={{ order }}&search={{ search }}&column={{ column }}&tag={{ tag }}" class="btn btn-secondary">
                         {{ articles.next_page_number }}
                     </a>
                     <span>...</span>
-                    <a href="?page={{ articles.paginator.num_pages }}&order={{ order }}&search={{ search }}" class="btn btn-success">
+                    <a href="?page={{ articles.paginator.num_pages }}&order={{ order }}&search={{ search }}&column={{ column }}&tag={{ tag }}" class="btn btn-success">
                         {{ articles.paginator.num_pages }} &raquo;
                     </a>
                 {% endif %}
