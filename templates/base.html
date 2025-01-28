@@ -5,6 +5,7 @@
     <title>NCNet-南城网 {% block title %}{% endblock %}</title>
     <link rel="shortcut icon" href="{% static 'server/favicon.ico' %}" />
     <link rel="stylesheet" href="{% static 'prism/prism.css' %}">
+    <link rel="stylesheet" href="{% static 'editor.md-master/css/editormd.css' %}"/>
     {% block head %}{% endblock head %}
     <style>
         [data-bs-theme="purple"] {
@@ -49,6 +50,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
     <script src="{% static 'bootstrap/js/bootstrap.min.js' %}"></script>
     <script src="{% static 'layer/layer.js' %}"></script>
+    <script src="{% static 'editor.md-master/editormd.js' %}"></script>
     <script src="{% static 'ckeditor/ckeditor/plugins/prism/lib/prism/prism_patched.min.js' %}"></script>
     {% include 'back_to_top_func.html' %}
 </body>

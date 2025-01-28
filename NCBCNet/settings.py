@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'mptt',
     'ckeditor',
     # 'notifications',
+    'mdeditor',
 ]
 
 MIDDLEWARE = [

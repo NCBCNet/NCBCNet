@@ -30,6 +30,9 @@ urlpatterns = [
     path('article/',include('article.urls',namespace='article')),
     path('usermanage/',include('usermanage.urls',namespace='usermanage')),
     path('comment/', include('comment.urls', namespace='comment')),
+    path(r'mdeditor/', include('mdeditor.urls')),
 ]
 
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+if settings.DEBUG:
+    # static files (images, css, javascript, etc.)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
