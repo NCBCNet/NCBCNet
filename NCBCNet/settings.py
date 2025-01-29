@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'ckeditor',
     # 'notifications',
     'mdeditor',
+
 ]
 
 MIDDLEWARE = [

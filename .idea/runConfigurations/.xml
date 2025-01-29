@@ -10,13 +10,13 @@
     </envs>
     <option name="SDK_HOME" value="" />
     <option name="SDK_NAME" value="Python 3.12 (NCBCNet)" />
-    <option name="WORKING_DIRECTORY" value="D:\Programmimg\NCBCNet" />
+    <option name="WORKING_DIRECTORY" value="E:\NCBCNet" />
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <option name="launchJavascriptDebuger" value="false" />
     <option name="port" value="8080" />
-    <option name="host" value="10.6.8.69" />
+    <option name="host" value="localhost" />
     <option name="additionalOptions" value="" />
     <option name="browserUrl" value="" />
     <option name="runTestServer" value="false" />

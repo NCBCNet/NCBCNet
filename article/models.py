@@ -2,10 +2,14 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.urls import reverse
+from mdeditor.fields import MDTextField
 from taggit.managers import TaggableManager
 from PIL import Image
-# Create your models here.
 
+# Create your models here.
+class Articletest(models.Model):
+    title = models.CharField(max_length=100)
+    content = MDTextField()
 class ArticleColumn(models.Model):
     """
     栏目的Model

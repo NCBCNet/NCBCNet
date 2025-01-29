@@ -21,6 +21,7 @@ from server import views
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.views import serve
+# import notifications.urls
 
 urlpatterns = [
     path('favicon.ico', serve, {'path': 'server/favicon.ico'}),
@@ -31,6 +32,8 @@ urlpatterns = [
     path('usermanage/',include('usermanage.urls',namespace='usermanage')),
     path('comment/', include('comment.urls', namespace='comment')),
     path(r'mdeditor/', include('mdeditor.urls')),
+    # path('^inbox/notifications/', include(notifications.urls, namespace='notifications')),
+
 ]
 
 if settings.DEBUG:
