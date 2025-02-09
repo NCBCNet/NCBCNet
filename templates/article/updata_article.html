@@ -43,7 +43,8 @@
                     <br>
                     <div class="form-group">
                         <label for="content" class="form-label">文章内容</label>
-                        <textarea type="text" class="form-control" id="content" name="content" rows="12">{{ article.content }}</textarea>
+                        {{ article_form.media }}
+                        {{ article_form.content }}
                     </div>
                     <br>
                     <button type="submit" class="btn btn-primary">提交</button>

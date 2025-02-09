@@ -24,6 +24,15 @@ class Article(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
     avatar = models.ImageField(upload_to='article/%Y%m%d/', blank=True)
+    kinds = {
+        "at": "article",
+        "ds": "discussions",
+    }
+    kind = models.CharField(
+        max_length=2,
+        choices=kinds,
+        default="at",
+    )
 
     def save(self,*args ,**kwargs):
         article = super(Article,self).save(*args,**kwargs)
@@ -38,7 +47,7 @@ class Article(models.Model):
     column = models.ForeignKey(ArticleColumn,null=True,blank=True,on_delete=models.CASCADE,related_name='article')
     tags = TaggableManager(blank=True)
     likes = models.PositiveIntegerField(default=0)
-    content = models.TextField()
+    content = MDTextField()
     created = models.DateTimeField(default=timezone.now)
     updated = models.DateTimeField(auto_now=True)
     total_views = models.PositiveIntegerField(default=0)

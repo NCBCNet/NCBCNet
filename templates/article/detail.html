@@ -16,12 +16,17 @@
         transform: translate3d(0, 0, 0);
         will-change: position, transform;
     }
+    img{
+        width: 100%;
+        object-fit: contain;
+        border-radius: 20px;
+    }
     </style>
 {% endblock %}
 {% block content %}
     <div class="container">
         <div class="row">
-            <div class="col-9">
+            <div class="col-9" id="main_content">
                 <h1 class="col-12 mt-4 mb-4">{{ article.title }}</h1>
                 <div class="col-12 alert alert-primary">
                     <div>
@@ -42,7 +47,7 @@
                         浏览量: {{ article.total_views }}
                     </div>
                 </div>
-                <div class="col-12" style="word-wrap: break-word;">
+                <div class="col-12" style="word-wrap: break-word;max-width: 100%">
                     {{ article.content | safe }}
                 </div>
                 <div class="mt-4">
@@ -164,7 +169,7 @@
     <script type="text/javascript">
         $('#sidebar').stickySidebar({
             topSpacing: 80,
-            bottomSpacing: 20,
+            bottomSpacing: 80,
         });
     </script>
     <script>

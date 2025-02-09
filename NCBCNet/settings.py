@@ -22,7 +22,6 @@ file_path = 'SECRET'
 # SECURITY WARNING: keep the secret key used in production secret!
 with open(file_path, 'r') as f:
     file_content =f.read()
-    print(file_content)
     SECRET_KEY = file_content
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -176,7 +175,9 @@ TIME_ZONE = 'Asia/Chongqing'
 USE_I18N = True
 
 USE_TZ = True
-
+SIMPLEUI_LOGO = "{% static 'server/favicon.ico' %}"
+SIMPLEUI_HOME_INFO = False
+SIMPLEUI_ANALYSIS = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/

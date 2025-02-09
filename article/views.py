@@ -1,3 +1,4 @@
+from anyio.abc import value
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views import View
@@ -95,6 +96,7 @@ def article_update(request, id):
     if request.user == article.author:
         if request.method == 'POST':
             form = ArticlePostForm(data=request.POST)
+            form.content = request.POST['content']
             if form.is_valid():
                 article.title = request.POST['title']
                 article.content = request.POST['content']
@@ -111,7 +113,7 @@ def article_update(request, id):
             else:
                 return HttpResponse("表单有误")
         else:
-            article_form = ArticlePostForm()
+            article_form = ArticlePostForm(initial={'content':article.content})
             columns = ArticleColumn.objects.all()
             tagson = ''
             for tag in article.tags.all():
