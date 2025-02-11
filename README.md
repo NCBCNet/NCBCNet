@@ -1,3 +1,7 @@
+[![](https://img.shields.io/badge/python-3.12.0-orange.svg)](https://www.python.org/downloads/release/python-3120/)
+[![](https://img.shields.io/badge/django-5.1.1-green.svg)](https://docs.djangoproject.com/en/5.1/releases/5.1/)
+[![](https://img.shields.io/badge/bootstrap-5.3.3-blue.svg)](https://getbootstrap.com/docs/5.3/getting-started/introduction/)
+[![](https://img.shields.io/badge/license-AGPL_3.0-000000.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
 # NCBCNet
 [简体中文](README.md)|[English](README_EN.md)
 ## 介绍
