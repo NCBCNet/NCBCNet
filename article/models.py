@@ -24,15 +24,15 @@ class Article(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
     avatar = models.ImageField(upload_to='article/%Y%m%d/', blank=True)
-    kinds = {
-        "at": "article",
-        "ds": "discussions",
-    }
-    kind = models.CharField(
-        max_length=2,
-        choices=kinds,
-        default="at",
-    )
+    # kinds = {
+    #     "at": "article",
+    #     "ds": "discussions",
+    # }
+    # kind = models.CharField(
+    #     max_length=2,
+    #     choices=kinds,
+    #     default="at",
+    # )
 
     def save(self,*args ,**kwargs):
         article = super(Article,self).save(*args,**kwargs)
