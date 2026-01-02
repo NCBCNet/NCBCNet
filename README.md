@@ -19,3 +19,12 @@ python.exe manage.py runserver localhost:8080
 感谢**大江狗的博客**在必要时提供的阅读帮助
 
 还有**StackLens**的django blog教程，这里是的仓库链接[django-blog-tutorial](https://github.com/stacklens/django_blog_tutorial)
+
+
+![Contribitons](https://contrib.nn.ci/api?repo=NCBCNet/NCBCNet)
+![Alt](https://repobeats.axiom.co/api/embed/c5b6a55965a500c042fcb5ca08ea24c431d3cfcb.svg "Repobeats analytics image")
+
+## 星标历史
+
+
+[![Star History Chart](https://api.star-history.com/svg?repos=NCBCNet/NCBCNet&type=Date)](https://www.star-history.com/#NCBCNet/NCBCNet&Date)
