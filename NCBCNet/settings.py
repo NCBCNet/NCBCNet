@@ -25,10 +25,17 @@ with open(file_path, 'r') as f:
     SECRET_KEY = file_content
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['localhost',]
+ALLOWED_HOSTS = ['127.0.0.1','ncnetstudent.top']
 
+# Security Settings
+
+CSRF_COOKIE_SECURE = True
+
+SESSION_COOKIE_SECURE = True
+
+SECURE_SSL_REDIRECT = True
 
 # Application definition
 
@@ -125,7 +132,7 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
+CONN_MAX_AGE = 60 * 60 * 24
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -148,18 +155,45 @@ AUTH_PASSWORD_VALIDATORS = [
 # LOGGING = {
 #     'version': 1,
 #     'disable_existing_loggers': False,
+#     'formatters': {
+#         'verbose': {
+#             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+#             'style': '{',
+#         },
+#         'simple': {
+#             'format': '{levelname} {message}',
+#             'style': '{',
+#         },
+#     },
+#     'filters': {
+#         'require_debug_true': {
+#             '()': 'django.utils.log.RequireDebugTrue',
+#         },
+#     },
 #     'handlers': {
+#         'console': {
+#             'level': 'INFO',
+#             'filters': ['require_debug_true'],
+#             'class': 'logging.StreamHandler',
+#             'formatter': 'simple'
+#         },
 #         'file': {
 #             'level': 'DEBUG',
-#             'class': 'logging.FileHandler',
-#             'filename': os.path.join(BASE_DIR, 'logs/debug.log'),
+#             # 'class': 'logging.FileHandler',
+#             'class': 'logging.handlers.TimedRotatingFileHandler',
+#             'when': 'midnight',
+#             'backupCount': 30,
 #         },
 #     },
 #     'loggers': {
 #         'django': {
-#             'handlers': ['file'],
-#             'level': 'DEBUG',
+#             'handlers': ['console'],
 #             'propagate': True,
+#         },
+#         'django.request': {
+#             'handlers': ['file'],
+#             'level': 'WARNING',
+#             'propagate': False,
 #         },
 #     },
 # }
