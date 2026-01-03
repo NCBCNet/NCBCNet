@@ -25,7 +25,7 @@ with open(file_path, 'r') as f:
     SECRET_KEY = file_content
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['127.0.0.1','ncnetstudent.top','localhost']
 
