@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 
+from daphne.apps import DaphneConfig
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 file_path = 'SECRET'
@@ -26,10 +28,12 @@ with open(file_path, 'r') as f:
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
+DAPHNEON = True
 
-ALLOWED_HOSTS = ['127.0.0.1','ncnetstudent.top','localhost']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'ncnetstudent.top', '.ncnetstudent.top']
 
 # Security Settings
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 CSRF_COOKIE_SECURE = True
 
@@ -37,11 +41,16 @@ SESSION_COOKIE_SECURE = True
 
 SECURE_SSL_REDIRECT = True
 
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# HTTP Strict Transport Security (HSTS)
+# Start with a low value in production and increase once verified.
+SECURE_HSTS_SECONDS = 3600
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
 # Application definition
 
 INSTALLED_APPS = [
-    "sslserver",
+    "daphne",
     'simpleui',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -73,6 +82,13 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if DEBUG:
+    INSTALLED_APPS.append("sslserver")
+    if DAPHNEON:
+        MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 ROOT_URLCONF = 'NCBCNet.urls'
 
@@ -123,19 +139,34 @@ CKEDITOR_CONFIGS = { # 富文本编辑器有TM安全问题
     }
 }
 
+ASGI_APPLICATION = 'NCBCNet.asgi.application'
+
 WSGI_APPLICATION = 'NCBCNet.wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+# 生产环境使用MySQL数据库，开发环境使用SQLite数据库
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': "ncbcnetdb",
+        'USER': "ncbcnetserver",
+        'PASSWORD': "Ncbcnet@2024",
+        'HOST': "127.0.0.1",
+        'PORT': "3306",
     }
 }
-CONN_MAX_AGE = 60 * 60 * 24
+
+CONN_MAX_AGE = 60 * 60 * 1  # 数据库连接持续时间，单位为秒，这里设置为1小时
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -220,7 +251,12 @@ SIMPLEUI_ANALYSIS = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
-STATIC_ROOT = os.path.join(BASE_DIR, "cstatic/")
+STATIC_STATUS = False
+if STATIC_STATUS:
+    staticfiles_path = os.path.join(BASE_DIR, "staticfiles/")
+else:
+    staticfiles_path = "/usr/staticfiles/"
+STATIC_ROOT = staticfiles_path
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static/'),  # 添加此项

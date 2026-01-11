@@ -1,5 +1,3 @@
-from lib2to3.fixes.fix_input import context
-
 from django.shortcuts import render,redirect
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponse
