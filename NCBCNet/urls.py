@@ -24,14 +24,15 @@ from django.contrib.staticfiles.views import serve
 # import notifications.urls
 
 urlpatterns = [
+    path('',views.index),
     path('favicon.ico', serve, {'path': 'server/favicon.ico'}),
     path('admin/', admin.site.urls),
-    path('',views.index),
     path('server/', include('server.urls', namespace='server')),
     path('article/',include('article.urls',namespace='article')),
     path('usermanage/',include('usermanage.urls',namespace='usermanage')),
     path('comment/', include('comment.urls', namespace='comment')),
     path(r'mdeditor/', include('mdeditor.urls')),
+    # path('file_up/',include('file_save.urls',namespace='file_save')),
     # path('^inbox/notifications/', include(notifications.urls, namespace='notifications')),
 
 ]
