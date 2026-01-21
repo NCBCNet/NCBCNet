@@ -49,7 +49,7 @@ class ServerURLTest(TestCase):
     def test_easter_egg_url_resolves(self):
         """测试彩蛋页面URL解析"""
         url = reverse('server:easter_egg_1')
-        self.assertEqual(url, '/server/easter_egg_1/')
+        self.assertEqual(url, '/server/easter_egg/114514/1/')
 
 
 class ServerStaticFilesTest(TestCase):
