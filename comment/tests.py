@@ -17,7 +17,9 @@ class CommentModelTest(TestCase):
         self.article = Article.objects.create(
             author=self.user,
             title='测试文章',
-            content='测试内容'
+            content='测试内容',
+            likes=0,
+            total_views=0
         )
         self.comment = Comment.objects.create(
             article=self.article,
@@ -61,7 +63,9 @@ class CommentReplyTest(TestCase):
         self.article = Article.objects.create(
             author=self.user1,
             title='测试文章',
-            content='内容'
+            content='内容',
+            likes=0,
+            total_views=0
         )
         self.parent_comment = Comment.objects.create(
             article=self.article,
@@ -134,7 +138,9 @@ class CommentViewTest(TestCase):
         self.article = Article.objects.create(
             author=self.user,
             title='测试文章',
-            content='内容'
+            content='内容',
+            likes=0,
+            total_views=0
         )
     
     def test_post_comment_not_logged_in(self):
@@ -178,12 +184,16 @@ class CommentFilterTest(TestCase):
         self.article1 = Article.objects.create(
             author=self.user,
             title='文章1',
-            content='内容1'
+            content='内容1',
+            likes=0,
+            total_views=0
         )
         self.article2 = Article.objects.create(
             author=self.user,
             title='文章2',
-            content='内容2'
+            content='内容2',
+            likes=0,
+            total_views=0
         )
         self.comment1 = Comment.objects.create(
             article=self.article1,

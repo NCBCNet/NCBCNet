@@ -28,6 +28,7 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 SECURE_HSTS_PRELOAD = False
 
 # Use simple password hashers for faster tests
+# WARNING: These are ONLY for testing and should NEVER be used in production
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
