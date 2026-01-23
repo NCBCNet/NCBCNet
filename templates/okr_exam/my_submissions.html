@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}我的提交记录{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="mb-4">我的提交记录</h2>
+            
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>试卷</th>
+                            <th>提交时间</th>
+                            <th>总分</th>
+                            <th>得分</th>
+                            <th>评分状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for submission in submissions %}
+                        <tr>
+                            <td>{{ submission.paper.title }}</td>
+                            <td>{{ submission.submitted_at|date:"Y-m-d H:i" }}</td>
+                            <td>{{ submission.total_score }}</td>
+                            <td>{{ submission.graded_score }}</td>
+                            <td>
+                                {% if submission.is_graded %}
+                                <span class="badge bg-success">已评分</span>
+                                {% else %}
+                                <span class="badge bg-warning">待评分</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'okr_exam:submission_detail' submission.id %}" 
+                                   class="btn btn-sm btn-primary">查看详情</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">暂无提交记录</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{% url 'okr_exam:exam_list' %}" class="btn btn-primary">返回试卷列表</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

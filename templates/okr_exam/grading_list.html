@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}评卷管理{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="mb-4">评卷管理</h2>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">筛选试卷</label>
+                            <select name="paper" class="form-select">
+                                <option value="">全部试卷</option>
+                                {% for paper in papers %}
+                                <option value="{{ paper.id }}" {% if request.GET.paper == paper.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ paper.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">评分状态</label>
+                            <select name="is_graded" class="form-select">
+                                <option value="">全部</option>
+                                <option value="true" {% if request.GET.is_graded == "true" %}selected{% endif %}>已评分</option>
+                                <option value="false" {% if request.GET.is_graded == "false" %}selected{% endif %}>待评分</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary d-block">筛选</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>学生</th>
+                            <th>试卷</th>
+                            <th>提交时间</th>
+                            <th>总分</th>
+                            <th>得分</th>
+                            <th>评分状态</th>
+                            <th>评卷人</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for submission in submissions %}
+                        <tr>
+                            <td>{{ submission.student.username }}</td>
+                            <td>{{ submission.paper.title }}</td>
+                            <td>{{ submission.submitted_at|date:"Y-m-d H:i" }}</td>
+                            <td>{{ submission.total_score }}</td>
+                            <td>{{ submission.graded_score }}</td>
+                            <td>
+                                {% if submission.is_graded %}
+                                <span class="badge bg-success">已评分</span>
+                                {% else %}
+                                <span class="badge bg-warning">待评分</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ submission.grader.username|default:"-" }}</td>
+                            <td>
+                                {% if not submission.is_graded %}
+                                <a href="{% url 'okr_exam:grade_submission' submission.id %}" 
+                                   class="btn btn-sm btn-primary">评卷</a>
+                                {% else %}
+                                <a href="{% url 'okr_exam:submission_detail' submission.id %}" 
+                                   class="btn btn-sm btn-info">查看</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">暂无提交记录</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{% url 'okr_exam:exam_list' %}" class="btn btn-secondary">返回试卷列表</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

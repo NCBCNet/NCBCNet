@@ -31,6 +31,7 @@ urlpatterns = [
     path('article/',include('article.urls',namespace='article')),
     path('usermanage/',include('usermanage.urls',namespace='usermanage')),
     path('comment/', include('comment.urls', namespace='comment')),
+    path('okr_exam/', include('okr_exam.urls', namespace='okr_exam')),
     path(r'mdeditor/', include('mdeditor.urls')),
     # path('file_up/',include('file_save.urls',namespace='file_save')),
     # path('^inbox/notifications/', include(notifications.urls, namespace='notifications')),

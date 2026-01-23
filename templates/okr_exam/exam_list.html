@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}OKR评卷系统 - 试卷列表{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="mb-4">试卷列表</h2>
+            
+            <div class="row">
+                {% for paper in papers %}
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ paper.title }}</h5>
+                            <p class="card-text">{{ paper.description|truncatewords:20 }}</p>
+                            <div class="mb-2">
+                                <span class="badge bg-primary">总分: {{ paper.total_score }}</span>
+                                <span class="badge bg-info">时长: {{ paper.duration }}分钟</span>
+                            </div>
+                            <a href="{% url 'okr_exam:exam_detail' paper.id %}" class="btn btn-primary">查看详情</a>
+                            {% if user.is_authenticated %}
+                            <a href="{% url 'okr_exam:start_exam' paper.id %}" class="btn btn-success">开始考试</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-md-12">
+                    <div class="alert alert-info">暂无可用试卷</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    {% if user.is_authenticated %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <a href="{% url 'okr_exam:my_submissions' %}" class="btn btn-outline-primary">我的提交记录</a>
+            {% if user.is_staff %}
+            <a href="{% url 'okr_exam:grading_list' %}" class="btn btn-outline-success">评卷管理</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

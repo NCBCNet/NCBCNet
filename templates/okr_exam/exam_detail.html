@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ paper.title }} - 试卷详情{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>{{ paper.title }}</h2>
+            <p class="text-muted">{{ paper.description }}</p>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">考试信息</h5>
+                    <ul class="list-unstyled">
+                        <li><strong>总分:</strong> {{ paper.total_score }}</li>
+                        <li><strong>考试时长:</strong> {{ paper.duration }} 分钟</li>
+                        <li><strong>创建者:</strong> {{ paper.creator.username }}</li>
+                        <li><strong>创建时间:</strong> {{ paper.created_at|date:"Y-m-d H:i" }}</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h4>试卷内容</h4>
+            {% for section in sections %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>{{ section.title }}</strong>
+                    {% if section.description %}
+                    <p class="mb-0 text-muted">{{ section.description }}</p>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% for question in section.questions.all %}
+                    <div class="mb-3">
+                        <p><strong>{{ forloop.counter }}. [{{ question.get_question_type_display }}] ({{ question.score }}分)</strong></p>
+                        <p>{{ question.content }}</p>
+                        {% if question.question_type == 'choice' or question.question_type == 'multiple' %}
+                        <ul class="list-unstyled ms-3">
+                            {% for option in question.options.all %}
+                            <li>{{ forloop.counter|add:64|chr }}. {{ option.content }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div class="mt-4">
+                <a href="{% url 'okr_exam:exam_list' %}" class="btn btn-secondary">返回列表</a>
+                {% if user.is_authenticated %}
+                    {% if submission %}
+                    <a href="{% url 'okr_exam:take_exam' submission.id %}" class="btn btn-warning">继续考试</a>
+                    {% else %}
+                    <a href="{% url 'okr_exam:start_exam' paper.id %}" class="btn btn-success">开始考试</a>
+                    {% endif %}
+                {% else %}
+                <span class="text-muted">请登录后参加考试</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

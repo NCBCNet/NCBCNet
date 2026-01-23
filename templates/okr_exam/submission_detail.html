@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}提交详情{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>提交详情</h2>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">{{ submission.paper.title }}</h5>
+                    <ul class="list-unstyled">
+                        <li><strong>学生:</strong> {{ submission.student.username }}</li>
+                        <li><strong>开始时间:</strong> {{ submission.started_at|date:"Y-m-d H:i:s" }}</li>
+                        <li><strong>提交时间:</strong> {{ submission.submitted_at|date:"Y-m-d H:i:s"|default:"未提交" }}</li>
+                        <li><strong>总分:</strong> {{ submission.total_score }}</li>
+                        <li><strong>得分:</strong> {{ submission.graded_score }}</li>
+                        <li><strong>评分状态:</strong> 
+                            {% if submission.is_graded %}
+                            <span class="badge bg-success">已评分</span>
+                            {% else %}
+                            <span class="badge bg-warning">待评分</span>
+                            {% endif %}
+                        </li>
+                        {% if submission.is_graded %}
+                        <li><strong>评卷人:</strong> {{ submission.grader.username|default:"系统自动" }}</li>
+                        <li><strong>评卷时间:</strong> {{ submission.graded_at|date:"Y-m-d H:i:s" }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            
+            <h4>答题详情</h4>
+            {% for section_data in sections_data %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>{{ section_data.section.title }}</strong>
+                </div>
+                <div class="card-body">
+                    {% for answer in section_data.answers %}
+                    <div class="mb-4 p-3 border rounded">
+                        <h6>
+                            题目 {{ forloop.counter }} [{{ answer.question.get_question_type_display }}] 
+                            (总分: {{ answer.question.score }}，得分: {{ answer.score }})
+                        </h6>
+                        <p><strong>题目:</strong> {{ answer.question.content }}</p>
+                        
+                        {% if answer.question.question_type == 'choice' or answer.question.question_type == 'multiple' %}
+                            <p><strong>正确答案:</strong></p>
+                            <ul>
+                                {% for option in answer.question.options.all %}
+                                    {% if option.is_correct %}
+                                    <li class="text-success">✓ {{ option.content }}</li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                            <p><strong>你的答案:</strong></p>
+                            <ul>
+                                {% for option in answer.selected_options.all %}
+                                <li {% if option.is_correct %}class="text-success"{% else %}class="text-danger"{% endif %}>
+                                    {{ option.content }}
+                                </li>
+                                {% empty %}
+                                <li class="text-muted">未作答</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p><strong>你的答案:</strong></p>
+                            <div class="p-2 bg-light rounded">
+                                {{ answer.content|default:"未作答"|linebreaks }}
+                            </div>
+                        {% endif %}
+                        
+                        {% if answer.feedback %}
+                        <div class="mt-2">
+                            <strong>评语:</strong>
+                            <p class="text-primary">{{ answer.feedback }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div class="mt-4">
+                <a href="{% url 'okr_exam:my_submissions' %}" class="btn btn-secondary">返回我的提交</a>
+                <a href="{% url 'okr_exam:exam_list' %}" class="btn btn-primary">返回试卷列表</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

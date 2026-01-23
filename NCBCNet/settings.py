@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'file_save',
     'usermanage',
     'comment',
+    'okr_exam',
     'taggit',
     'mptt',
     'ckeditor',

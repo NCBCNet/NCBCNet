@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ paper.title }} - 答题{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="alert alert-info">
+                <strong>考试中:</strong> {{ paper.title }}
+                <span class="float-end">开始时间: {{ submission.started_at|date:"Y-m-d H:i" }}</span>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                {% for section in sections %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>{{ section.title }}</h5>
+                        {% if section.description %}
+                        <p class="mb-0 text-muted">{{ section.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% for question in section.questions.all %}
+                        <div class="mb-4 p-3 border rounded">
+                            <h6>题目 {{ forloop.counter }} [{{ question.get_question_type_display }}] ({{ question.score }}分)</h6>
+                            <p>{{ question.content }}</p>
+                            
+                            {% if question.question_type == 'choice' %}
+                                {% for option in question.options.all %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" 
+                                           name="question_{{ question.id }}" 
+                                           id="option_{{ option.id }}" 
+                                           value="{{ option.id }}">
+                                    <label class="form-check-label" for="option_{{ option.id }}">
+                                        {{ forloop.counter|add:64|chr }}. {{ option.content }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            {% elif question.question_type == 'multiple' %}
+                                {% for option in question.options.all %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="question_{{ question.id }}" 
+                                           id="option_{{ option.id }}" 
+                                           value="{{ option.id }}">
+                                    <label class="form-check-label" for="option_{{ option.id }}">
+                                        {{ forloop.counter|add:64|chr }}. {{ option.content }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            {% elif question.question_type == 'essay' or question.question_type == 'fill' %}
+                                <textarea class="form-control" name="question_{{ question.id }}" 
+                                          rows="5" placeholder="请在此输入答案"></textarea>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <div class="mt-4 mb-4">
+                    <button type="submit" name="save" class="btn btn-primary">保存答案</button>
+                    <button type="submit" name="submit" class="btn btn-success" 
+                            onclick="return confirm('确定要提交试卷吗？提交后将无法修改。')">提交试卷</button>
+                    <a href="{% url 'okr_exam:exam_list' %}" class="btn btn-secondary">返回列表</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
