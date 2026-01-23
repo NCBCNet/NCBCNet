@@ -81,17 +81,24 @@ def take_exam(request, submission_id):
                     answer.selected_options.set(QuestionOption.objects.filter(id__in=option_ids))
                     
                     # 自动评分选择题
+                    answer.score = 0  # Reset score first
                     if question.question_type == 'choice':
                         if option_ids and len(option_ids) == 1:
-                            selected_option = QuestionOption.objects.get(id=option_ids[0])
-                            if selected_option.is_correct:
-                                answer.score = question.score
+                            try:
+                                selected_option = QuestionOption.objects.get(id=option_ids[0])
+                                if selected_option.is_correct:
+                                    answer.score = question.score
+                            except QuestionOption.DoesNotExist:
+                                pass  # Invalid option, score remains 0
                         answer.is_graded = True
                     elif question.question_type == 'multiple':
                         correct_options = set(question.options.filter(is_correct=True).values_list('id', flat=True))
-                        selected_set = set(int(id) for id in option_ids)
-                        if correct_options == selected_set:
-                            answer.score = question.score
+                        try:
+                            selected_set = set(int(id) for id in option_ids)
+                            if correct_options == selected_set:
+                                answer.score = question.score
+                        except (ValueError, TypeError):
+                            pass  # Invalid option ID, score remains 0
                         answer.is_graded = True
                 else:
                     answer.content = request.POST.get(f'question_{question.id}', '')
@@ -209,7 +216,7 @@ def grade_submission(request, submission_id):
                     answer.is_graded = True
                     answer.save()
                 except ValueError:
-                    messages.error(request, f'题目 {answer.question.id} 的分数格式不正确。')
+                    messages.error(request, f'题目"{answer.question.content[:30]}"的分数格式不正确。')
                     return redirect('okr_exam:grade_submission', submission_id=submission_id)
         
         # 更新提交记录

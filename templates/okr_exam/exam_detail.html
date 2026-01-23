@@ -39,7 +39,7 @@
                         {% if question.question_type == 'choice' or question.question_type == 'multiple' %}
                         <ul class="list-unstyled ms-3">
                             {% for option in question.options.all %}
-                            <li>{{ forloop.counter|add:64|chr }}. {{ option.content }}</li>
+                            <li>{% if forloop.counter == 1 %}A{% elif forloop.counter == 2 %}B{% elif forloop.counter == 3 %}C{% elif forloop.counter == 4 %}D{% elif forloop.counter == 5 %}E{% elif forloop.counter == 6 %}F{% endif %}. {{ option.content }}</li>
                             {% endfor %}
                         </ul>
                         {% endif %}

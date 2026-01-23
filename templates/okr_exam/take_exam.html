@@ -26,7 +26,7 @@
                     <div class="card-body">
                         {% for question in section.questions.all %}
                         <div class="mb-4 p-3 border rounded">
-                            <h6>题目 {{ forloop.counter }} [{{ question.get_question_type_display }}] ({{ question.score }}分)</h6>
+                            <h6>题目 {{ question.order }} [{{ question.get_question_type_display }}] ({{ question.score }}分)</h6>
                             <p>{{ question.content }}</p>
                             
                             {% if question.question_type == 'choice' %}
@@ -37,7 +37,7 @@
                                            id="option_{{ option.id }}" 
                                            value="{{ option.id }}">
                                     <label class="form-check-label" for="option_{{ option.id }}">
-                                        {{ forloop.counter|add:64|chr }}. {{ option.content }}
+                                        {% if forloop.counter == 1 %}A{% elif forloop.counter == 2 %}B{% elif forloop.counter == 3 %}C{% elif forloop.counter == 4 %}D{% elif forloop.counter == 5 %}E{% elif forloop.counter == 6 %}F{% endif %}. {{ option.content }}
                                     </label>
                                 </div>
                                 {% endfor %}
@@ -49,7 +49,7 @@
                                            id="option_{{ option.id }}" 
                                            value="{{ option.id }}">
                                     <label class="form-check-label" for="option_{{ option.id }}">
-                                        {{ forloop.counter|add:64|chr }}. {{ option.content }}
+                                        {% if forloop.counter == 1 %}A{% elif forloop.counter == 2 %}B{% elif forloop.counter == 3 %}C{% elif forloop.counter == 4 %}D{% elif forloop.counter == 5 %}E{% elif forloop.counter == 6 %}F{% endif %}. {{ option.content }}
                                     </label>
                                 </div>
                                 {% endfor %}
