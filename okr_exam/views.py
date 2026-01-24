@@ -267,20 +267,24 @@ def upload_scanned_paper(request, paper_id):
     paper = get_object_or_404(ExamPaper, id=paper_id, is_active=True)
     
     if request.method == 'POST' and request.FILES.get('scanned_image'):
-        # 创建或获取提交记录
-        submission, created = ExamSubmission.objects.get_or_create(
+        # 查找或创建扫描试卷提交记录
+        submission = ExamSubmission.objects.filter(
             paper=paper,
             student=request.user,
             is_submitted=False,
-            defaults={
-                'total_score': paper.total_score,
-                'is_scanned': True
-            }
-        )
+            is_scanned=True
+        ).first()
+        
+        if not submission:
+            submission = ExamSubmission.objects.create(
+                paper=paper,
+                student=request.user,
+                total_score=paper.total_score,
+                is_scanned=True
+            )
         
         # 保存扫描图片
         submission.scanned_image = request.FILES['scanned_image']
-        submission.is_scanned = True
         submission.save()
         
         messages.success(request, '扫描试卷上传成功！')
@@ -392,27 +396,30 @@ def grade_segment(request, segment_id):
                 messages.error(request, f'题目"{question.content[:30]}"的分数格式不正确。')
                 return redirect('okr_exam:grade_segment', segment_id=segment_id)
         
-        # 检查是否所有分节都已评分
-        total_questions = segment.submission.paper.sections.aggregate(
-            models.Count('questions')
-        )['questions__count'] or 0
+        # 更新提交的总得分（即使未完全评完也要更新）
+        total_score = Answer.objects.filter(
+            submission=segment.submission,
+            is_graded=True
+        ).aggregate(models.Sum('score'))['score__sum'] or 0
+        
+        segment.submission.graded_score = total_score
+        
+        # 检查是否所有题目都已评分
+        total_questions = Question.objects.filter(
+            section__paper=segment.submission.paper
+        ).count()
         
         graded_answers = Answer.objects.filter(
             submission=segment.submission,
             is_graded=True
         ).count()
         
-        # 更新提交的评分状态
-        if graded_answers >= total_questions:
-            # 计算总分
-            total_score = Answer.objects.filter(
-                submission=segment.submission
-            ).aggregate(models.Sum('score'))['score__sum'] or 0
-            
-            segment.submission.graded_score = total_score
+        # 如果所有题目都已评分，标记为完成
+        if graded_answers >= total_questions and total_questions > 0:
             segment.submission.is_graded = True
             segment.submission.graded_at = timezone.now()
-            segment.submission.save()
+        
+        segment.submission.save()
         
         messages.success(request, '评分保存成功！')
         return redirect('okr_exam:grading_by_section')

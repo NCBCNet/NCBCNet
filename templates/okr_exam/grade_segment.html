@@ -68,22 +68,48 @@
                                     </h6>
                                     <p><strong>题目:</strong> {{ question.content }}</p>
                                     
-                                    {% with answer=answers|default_if_none:dict|get_item:question.id %}
-                                    {% if answer and answer.is_graded %}
-                                    <div class="alert alert-success">
-                                        已评分: {{ answer.score }}分
-                                        {% if answer.feedback %}
-                                        <br>评语: {{ answer.feedback }}
+                                    {% for qid, answer in answers.items %}
+                                        {% if qid == question.id %}
+                                            {% if answer.is_graded %}
+                                            <div class="alert alert-success">
+                                                已评分: {{ answer.score }}分
+                                                {% if answer.feedback %}
+                                                <br>评语: {{ answer.feedback }}
+                                                {% endif %}
+                                            </div>
+                                            {% else %}
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <label class="form-label">得分</label>
+                                                    <input type="number" 
+                                                           class="form-control" 
+                                                           name="score_{{ question.id }}" 
+                                                           value="{{ answer.score }}"
+                                                           min="0" 
+                                                           max="{{ question.score }}" 
+                                                           step="0.5"
+                                                           required>
+                                                </div>
+                                                <div class="col-md-8">
+                                                    <label class="form-label">评语</label>
+                                                    <textarea class="form-control" 
+                                                              name="feedback_{{ question.id }}" 
+                                                              rows="2">{{ answer.feedback }}</textarea>
+                                                </div>
+                                            </div>
+                                            {% endif %}
                                         {% endif %}
-                                    </div>
-                                    {% else %}
+                                    {% endfor %}
+                                    
+                                    {# If no answer found, show empty form #}
+                                    {% if question.id not in answers.keys %}
                                     <div class="row">
                                         <div class="col-md-4">
                                             <label class="form-label">得分</label>
                                             <input type="number" 
                                                    class="form-control" 
                                                    name="score_{{ question.id }}" 
-                                                   value="{% if answer %}{{ answer.score }}{% else %}0{% endif %}"
+                                                   value="0"
                                                    min="0" 
                                                    max="{{ question.score }}" 
                                                    step="0.5"
@@ -93,11 +119,10 @@
                                             <label class="form-label">评语</label>
                                             <textarea class="form-control" 
                                                       name="feedback_{{ question.id }}" 
-                                                      rows="2">{% if answer %}{{ answer.feedback }}{% endif %}</textarea>
+                                                      rows="2"></textarea>
                                         </div>
                                     </div>
                                     {% endif %}
-                                    {% endwith %}
                                 </div>
                                 {% endfor %}
                                 
@@ -114,14 +139,4 @@
         </div>
     </div>
 </div>
-
-<script>
-// 自定义过滤器
-document.addEventListener('DOMContentLoaded', function() {
-    // 辅助函数：从字典中获取项
-    Object.prototype.get_item = function(key) {
-        return this[key];
-    };
-});
-</script>
 {% endblock %}
