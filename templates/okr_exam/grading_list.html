@@ -9,6 +9,13 @@
         <div class="col-md-12">
             <h2 class="mb-4">评卷管理</h2>
             
+            <div class="mb-3">
+                <a href="{% url 'okr_exam:grading_by_section' %}" class="btn btn-primary">
+                    <i class="bi bi-grid-3x3-gap"></i> 按分节评卷
+                </a>
+                <span class="text-muted ms-2">（适用于扫描试卷）</span>
+            </div>
+            
             <div class="card mb-4">
                 <div class="card-body">
                     <form method="get" class="row g-3">

@@ -29,6 +29,12 @@ class PaperSection(models.Model):
     description = models.TextField(blank=True, verbose_name='分节说明')
     order = models.IntegerField(default=0, verbose_name='排序')
     
+    # 扫描试卷图片分割区域定义
+    region_x = models.IntegerField(default=0, verbose_name='区域X坐标(%)')
+    region_y = models.IntegerField(default=0, verbose_name='区域Y坐标(%)')
+    region_width = models.IntegerField(default=100, verbose_name='区域宽度(%)')
+    region_height = models.IntegerField(default=100, verbose_name='区域高度(%)')
+    
     class Meta:
         verbose_name = '试卷分节'
         verbose_name_plural = '试卷分节'
@@ -91,6 +97,11 @@ class ExamSubmission(models.Model):
     grader = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='graded_submissions', verbose_name='评卷人')
     graded_at = models.DateTimeField(null=True, blank=True, verbose_name='评卷时间')
     
+    # 扫描试卷图片支持
+    scanned_image = models.ImageField(upload_to='exam_scans/%Y%m%d/', null=True, blank=True, verbose_name='扫描试卷图片')
+    is_scanned = models.BooleanField(default=False, verbose_name='是否为扫描试卷')
+    is_segmented = models.BooleanField(default=False, verbose_name='是否已分割')
+    
     class Meta:
         verbose_name = '考试提交'
         verbose_name_plural = '考试提交'
@@ -116,3 +127,40 @@ class Answer(models.Model):
     
     def __str__(self):
         return f"{self.submission.student.username} - {self.question.content[:30]}"
+
+
+class SectionAssignment(models.Model):
+    """试卷分节教师分配"""
+    section = models.ForeignKey(PaperSection, on_delete=models.CASCADE, related_name='assignments', verbose_name='试卷分节')
+    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='section_assignments', verbose_name='评卷教师')
+    assigned_at = models.DateTimeField(default=timezone.now, verbose_name='分配时间')
+    
+    class Meta:
+        verbose_name = '分节分配'
+        verbose_name_plural = '分节分配'
+        unique_together = ['section', 'teacher']
+    
+    def __str__(self):
+        return f"{self.section.title} → {self.teacher.username}"
+
+
+class ImageSegment(models.Model):
+    """图片答题区域分割"""
+    submission = models.ForeignKey(ExamSubmission, on_delete=models.CASCADE, related_name='segments', verbose_name='提交记录')
+    section = models.ForeignKey(PaperSection, on_delete=models.CASCADE, related_name='image_segments', verbose_name='所属分节')
+    segment_image = models.ImageField(upload_to='exam_segments/%Y%m%d/', verbose_name='分割后的图片')
+    
+    # 分割区域坐标 (从原始图片中裁剪的位置)
+    x = models.IntegerField(default=0, verbose_name='X坐标')
+    y = models.IntegerField(default=0, verbose_name='Y坐标')
+    width = models.IntegerField(default=0, verbose_name='宽度')
+    height = models.IntegerField(default=0, verbose_name='高度')
+    
+    created_at = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    
+    class Meta:
+        verbose_name = '图片分割'
+        verbose_name_plural = '图片分割'
+    
+    def __str__(self):
+        return f"{self.submission.student.username} - {self.section.title}"

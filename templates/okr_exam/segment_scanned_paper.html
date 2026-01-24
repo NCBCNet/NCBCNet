@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}分割扫描试卷{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <h2>扫描试卷预览与分割</h2>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">{{ submission.paper.title }}</h5>
+                    <p><strong>学生:</strong> {{ submission.student.username }}</p>
+                    <p><strong>上传时间:</strong> {{ submission.started_at|date:"Y-m-d H:i" }}</p>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>扫描试卷预览</h5>
+                </div>
+                <div class="card-body">
+                    {% if submission.scanned_image %}
+                    <div class="text-center mb-3">
+                        <img src="{{ submission.scanned_image.url }}" 
+                             alt="扫描试卷" 
+                             class="img-fluid border"
+                             style="max-width: 100%; max-height: 800px;">
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">未找到扫描图片</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>分节信息</h5>
+                </div>
+                <div class="card-body">
+                    <p>系统将根据以下分节定义自动分割试卷：</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>分节</th>
+                                    <th>区域位置</th>
+                                    <th>评卷教师</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for section in submission.paper.sections.all %}
+                                <tr>
+                                    <td>{{ section.title }}</td>
+                                    <td>
+                                        X: {{ section.region_x }}%, Y: {{ section.region_y }}%<br>
+                                        宽: {{ section.region_width }}%, 高: {{ section.region_height }}%
+                                    </td>
+                                    <td>
+                                        {% for assignment in section.assignments.all %}
+                                        <span class="badge bg-info">{{ assignment.teacher.username }}</span>
+                                        {% empty %}
+                                        <span class="text-muted">未分配</span>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    {% if not submission.is_segmented %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="alert alert-warning">
+                            <strong>注意：</strong>点击下方按钮后，系统将自动分割试卷图片。分割后将无法修改。
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                确认分割并提交试卷
+                            </button>
+                            <a href="{% url 'okr_exam:upload_scanned_paper' submission.paper.id %}" 
+                               class="btn btn-secondary">重新上传</a>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-success">
+                        <strong>已分割！</strong>试卷已成功分割并提交。
+                    </div>
+                    <a href="{% url 'okr_exam:submission_detail' submission.id %}" 
+                       class="btn btn-primary">查看提交详情</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

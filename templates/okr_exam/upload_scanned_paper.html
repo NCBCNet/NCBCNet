@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}上传扫描试卷 - {{ paper.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h2>上传扫描试卷</h2>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">{{ paper.title }}</h5>
+                    <p class="text-muted">{{ paper.description }}</p>
+                    <ul class="list-unstyled">
+                        <li><strong>总分:</strong> {{ paper.total_score }}</li>
+                        <li><strong>考试时长:</strong> {{ paper.duration }} 分钟</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5>上传说明</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6>操作步骤：</h6>
+                        <ol>
+                            <li>将完成的试卷进行扫描，保存为图片格式（JPG、PNG等）</li>
+                            <li>点击下方按钮选择扫描后的试卷图片</li>
+                            <li>上传后，系统会自动分割试卷的各个答题区域</li>
+                            <li>分割后的区域将分配给相应的老师进行评卷</li>
+                        </ol>
+                    </div>
+                    
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="scanned_image" class="form-label">选择扫描试卷图片</label>
+                            <input type="file" class="form-control" id="scanned_image" name="scanned_image" 
+                                   accept="image/*" required>
+                            <div class="form-text">支持的格式：JPG、PNG、BMP等图片格式</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">上传并分割试卷</button>
+                            <a href="{% url 'okr_exam:exam_list' %}" class="btn btn-secondary">返回试卷列表</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

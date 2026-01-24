@@ -55,7 +55,8 @@
                     {% if submission %}
                     <a href="{% url 'okr_exam:take_exam' submission.id %}" class="btn btn-warning">继续考试</a>
                     {% else %}
-                    <a href="{% url 'okr_exam:start_exam' paper.id %}" class="btn btn-success">开始考试</a>
+                    <a href="{% url 'okr_exam:start_exam' paper.id %}" class="btn btn-success">开始考试（在线答题）</a>
+                    <a href="{% url 'okr_exam:upload_scanned_paper' paper.id %}" class="btn btn-info">上传扫描试卷</a>
                     {% endif %}
                 {% else %}
                 <span class="text-muted">请登录后参加考试</span>

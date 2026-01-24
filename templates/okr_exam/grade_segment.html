@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}评卷 - {{ segment.section.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>评卷</h2>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>{{ segment.submission.paper.title }} - {{ segment.section.title }}</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>学生:</strong> {{ segment.submission.student.username }}</li>
+                                <li><strong>提交时间:</strong> {{ segment.submission.submitted_at|date:"Y-m-d H:i:s" }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>答题图片</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if segment.segment_image %}
+                            <div class="text-center">
+                                <img src="{{ segment.segment_image.url }}" 
+                                     alt="答题区域" 
+                                     class="img-fluid border"
+                                     style="max-width: 100%;">
+                            </div>
+                            <div class="mt-2">
+                                <a href="{{ segment.segment_image.url }}" 
+                                   target="_blank" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    在新窗口中打开
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">未找到答题图片</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>题目与评分</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                {% for question in questions %}
+                                <div class="mb-4 p-3 border rounded">
+                                    <h6>
+                                        题目 {{ question.order }} [{{ question.get_question_type_display }}]
+                                        (满分: {{ question.score }}分)
+                                    </h6>
+                                    <p><strong>题目:</strong> {{ question.content }}</p>
+                                    
+                                    {% with answer=answers|default_if_none:dict|get_item:question.id %}
+                                    {% if answer and answer.is_graded %}
+                                    <div class="alert alert-success">
+                                        已评分: {{ answer.score }}分
+                                        {% if answer.feedback %}
+                                        <br>评语: {{ answer.feedback }}
+                                        {% endif %}
+                                    </div>
+                                    {% else %}
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label class="form-label">得分</label>
+                                            <input type="number" 
+                                                   class="form-control" 
+                                                   name="score_{{ question.id }}" 
+                                                   value="{% if answer %}{{ answer.score }}{% else %}0{% endif %}"
+                                                   min="0" 
+                                                   max="{{ question.score }}" 
+                                                   step="0.5"
+                                                   required>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <label class="form-label">评语</label>
+                                            <textarea class="form-control" 
+                                                      name="feedback_{{ question.id }}" 
+                                                      rows="2">{% if answer %}{{ answer.feedback }}{% endif %}</textarea>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% endwith %}
+                                </div>
+                                {% endfor %}
+                                
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-success btn-lg">保存评分</button>
+                                    <a href="{% url 'okr_exam:grading_by_section' %}" 
+                                       class="btn btn-secondary">返回分节评卷列表</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 自定义过滤器
+document.addEventListener('DOMContentLoaded', function() {
+    // 辅助函数：从字典中获取项
+    Object.prototype.get_item = function(key) {
+        return this[key];
+    };
+});
+</script>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}按分节评卷{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>按分节评卷</h2>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>我负责的分节</h5>
+                </div>
+                <div class="card-body">
+                    {% if assigned_sections %}
+                    <div class="row">
+                        {% for assignment in assigned_sections %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ assignment.section.paper.title }}</h6>
+                                    <p class="card-text">
+                                        <strong>{{ assignment.section.title }}</strong><br>
+                                        {{ assignment.section.description|truncatewords:10 }}
+                                    </p>
+                                    <small class="text-muted">
+                                        分配时间: {{ assignment.assigned_at|date:"Y-m-d" }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        您还没有被分配任何分节。请联系管理员进行分配。
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5>待评卷的试卷片段</h5>
+                </div>
+                <div class="card-body">
+                    {% if segments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>学生</th>
+                                    <th>试卷</th>
+                                    <th>分节</th>
+                                    <th>提交时间</th>
+                                    <th>预览</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for segment in segments %}
+                                <tr>
+                                    <td>{{ segment.submission.student.username }}</td>
+                                    <td>{{ segment.submission.paper.title }}</td>
+                                    <td>{{ segment.section.title }}</td>
+                                    <td>{{ segment.submission.submitted_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if segment.segment_image %}
+                                        <a href="{{ segment.segment_image.url }}" target="_blank">
+                                            <img src="{{ segment.segment_image.url }}" 
+                                                 alt="片段预览" 
+                                                 style="max-width: 100px; max-height: 60px;"
+                                                 class="img-thumbnail">
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'okr_exam:grade_segment' segment.id %}" 
+                                           class="btn btn-sm btn-primary">评卷</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        暂无待评卷的试卷片段。
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{% url 'okr_exam:grading_list' %}" class="btn btn-secondary">查看全部提交</a>
+                <a href="{% url 'okr_exam:exam_list' %}" class="btn btn-outline-primary">返回试卷列表</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
