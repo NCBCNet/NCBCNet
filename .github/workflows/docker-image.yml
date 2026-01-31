@@ -2,9 +2,9 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "Deploy" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "Deploy" ]
 
 jobs:
 
@@ -16,3 +16,14 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+    - name: Save Docker image to tar
+      run: docker save my-app:${GITHUB_REF#refs/tags/} -o image.tar
+    - name: Upload Docker image to release
+      uses: softprops/action-gh-release@v1
+      with:
+         files: image.tar
+      env:
+         GITHUB_TOKEN: ${ secrets.GITHUB_TOKEN }}
+
+
+
