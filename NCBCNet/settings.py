@@ -69,8 +69,6 @@ INSTALLED_APPS = [
     'ckeditor',
     # 'notifications',
     'mdeditor',
-
-
 ]
 
 MIDDLEWARE = [
@@ -146,25 +144,26 @@ WSGI_APPLICATION = 'NCBCNet.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 # 生产环境使用MySQL数据库，开发环境使用SQLite数据库
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': "ncbcnetdb",
-        'USER': "ncbcnetserver",
-        'PASSWORD': "Ncbcnet@2024",
-        'HOST': "127.0.0.1",
-        'PORT': "3306",
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': "ncbcnetdb",
+            'USER': "ncbcnetserver",
+            'PASSWORD': "Ncbcnet@2024",
+            'HOST': "127.0.0.1",
+            'PORT': "3306",
+        }
+    }
 
 CONN_MAX_AGE = 60 * 60 * 1  # 数据库连接持续时间，单位为秒，这里设置为1小时
 
