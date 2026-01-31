@@ -1,0 +1,142 @@
+WARNING 2026-01-31 20:20:05,977 log 26040 32908 Not Found: /static/md_css/gh_dark.css
+WARNING 2026-01-31 20:20:05,978 log 26040 32108 Not Found: /static/prism/prism.css
+WARNING 2026-01-31 20:20:05,979 log 26040 25460 Not Found: /static/server/index/1.jpg
+WARNING 2026-01-31 20:20:05,979 log 26040 32908 Not Found: /static/editor.md-master/css/editormd.css
+WARNING 2026-01-31 20:20:05,982 log 26040 32108 Not Found: /static/bootstrap/css/bootstrap.min.css
+WARNING 2026-01-31 20:20:05,982 log 26040 32108 Not Found: /static/jquery/jquery-3.7.1.min.js
+WARNING 2026-01-31 20:20:05,991 log 26040 25460 Not Found: /static/bootstrap/js/bootstrap.min.js
+WARNING 2026-01-31 20:20:06,017 log 26040 32908 Not Found: /static/ckeditor/ckeditor/plugins/prism/lib/prism/prism_patched.min.js
+WARNING 2026-01-31 20:20:06,017 log 26040 32108 Not Found: /static/editor.md-master/editormd.js
+WARNING 2026-01-31 20:20:06,017 log 26040 9320 Not Found: /static/layer/layer.js
+WARNING 2026-01-31 20:20:11,582 log 26040 32108 Not Found: /static/server/favicon.ico
+WARNING 2026-01-31 20:20:37,545 log 30568 5480 Not Found: /static/editor.md-master/css/editormd.css
+WARNING 2026-01-31 20:20:37,550 log 30568 5480 Not Found: /static/md_css/gh_dark.css
+WARNING 2026-01-31 20:20:37,565 log 30568 5480 Not Found: /static/editor.md-master/editormd.js
+WARNING 2026-01-31 20:20:40,858 log 30568 18004 Not Found: /static/editor.md-master/css/editormd.css
+WARNING 2026-01-31 20:20:40,858 log 30568 18004 Not Found: /static/md_css/gh_dark.css
+WARNING 2026-01-31 20:20:40,868 log 30568 18004 Not Found: /static/editor.md-master/editormd.js
+ERROR 2026-01-31 20:20:47,892 log 30568 5480 Internal Server Error: /usermanage/login/
+Traceback (most recent call last):
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\backends\base\base.py", line 279, in ensure_connection
+    self.connect()
+  File "E:\NCBCNet\venv\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\backends\base\base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\backends\mysql\base.py", line 256, in get_new_connection
+    connection = Database.connect(**conn_params)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\MySQLdb\__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\MySQLdb\connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+MySQLdb.OperationalError: (1045, "Access denied for user 'ncbcnetserver'@'localhost' (using password: YES)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "E:\NCBCNet\venv\Lib\site-packages\asgiref\sync.py", line 518, in thread_handler
+    raise exc_info[1]
+  File "E:\NCBCNet\venv\Lib\site-packages\django\core\handlers\exception.py", line 42, in inner
+    response = await get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\asgiref\sync.py", line 518, in thread_handler
+    raise exc_info[1]
+  File "E:\NCBCNet\venv\Lib\site-packages\django\core\handlers\base.py", line 253, in _get_response_async
+    response = await wrapped_callback(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\asgiref\sync.py", line 468, in __call__
+    ret = await asyncio.shield(exec_coro)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\asgiref\current_thread_executor.py", line 40, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\asgiref\sync.py", line 522, in thread_handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\usermanage\views.py", line 32, in user_login
+    user = authenticate(username=data['username'], password=data['password'])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\views\decorators\debug.py", line 75, in sensitive_variables_wrapper
+    return func(*func_args, **func_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\contrib\auth\__init__.py", line 79, in authenticate
+    user = backend.authenticate(request, **credentials)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\contrib\auth\backends.py", line 42, in authenticate
+    user = UserModel._default_manager.get_by_natural_key(username)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\contrib\auth\base_user.py", line 37, in get_by_natural_key
+    return self.get(**{self.model.USERNAME_FIELD: username})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\models\query.py", line 645, in get
+    num = len(clone)
+          ^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\models\query.py", line 382, in __len__
+    self._fetch_all()
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\models\query.py", line 1928, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\models\query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1572, in execute_sql
+    cursor = self.connection.cursor()
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\backends\base\base.py", line 320, in cursor
+    return self._cursor()
+           ^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\backends\base\base.py", line 296, in _cursor
+    self.ensure_connection()
+  File "E:\NCBCNet\venv\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\backends\base\base.py", line 278, in ensure_connection
+    with self.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\backends\base\base.py", line 279, in ensure_connection
+    self.connect()
+  File "E:\NCBCNet\venv\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\backends\base\base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\utils\asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\django\db\backends\mysql\base.py", line 256, in get_new_connection
+    connection = Database.connect(**conn_params)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\MySQLdb\__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\NCBCNet\venv\Lib\site-packages\MySQLdb\connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+django.db.utils.OperationalError: (1045, "Access denied for user 'ncbcnetserver'@'localhost' (using password: YES)")
+WARNING 2026-01-31 20:21:05,674 log 30568 32212 Not Found: /static/md_css/gh_dark.css
+WARNING 2026-01-31 20:21:05,674 log 30568 5480 Not Found: /static/editor.md-master/css/editormd.css
+WARNING 2026-01-31 20:21:05,674 log 30568 18004 Not Found: /static/editor.md-master/editormd.js
+WARNING 2026-01-31 20:23:06,736 log 24548 31232 Not Found: /static/md_css/gh_dark.css
+WARNING 2026-01-31 20:23:06,737 log 24548 31232 Not Found: /static/editor.md-master/css/editormd.css
+WARNING 2026-01-31 20:23:06,747 log 24548 31232 Not Found: /static/editor.md-master/editormd.js
+WARNING 2026-01-31 20:23:15,642 log 24548 31232 Not Found: /static/editor.md-master/css/editormd.css
+WARNING 2026-01-31 20:23:15,643 log 24548 26576 Not Found: /static/md_css/gh_dark.css
+WARNING 2026-01-31 20:23:15,653 log 24548 26576 Not Found: /static/editor.md-master/editormd.js
+WARNING 2026-01-31 20:23:17,241 log 24548 24956 Not Found: /static/editor.md-master/css/editormd.css
+WARNING 2026-01-31 20:23:17,247 log 24548 26576 Not Found: /static/md_css/gh_dark.css
+WARNING 2026-01-31 20:23:17,256 log 24548 26576 Not Found: /static/editor.md-master/editormd.js
