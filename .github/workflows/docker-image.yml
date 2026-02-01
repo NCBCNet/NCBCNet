@@ -41,7 +41,7 @@ jobs:
     - name: Upload Docker image to release
       uses: softprops/action-gh-release@v1
       env:
-         GITHUB_TOKEN: ${ secrets.GITHUB_TOKEN }}
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         files: image.tar
         tag_name: v1.0.0
