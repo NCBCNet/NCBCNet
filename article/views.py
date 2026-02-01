@@ -122,7 +122,7 @@ def article_update(request, id):
             context = {'article_form': article_form, 'article': article,'columns':columns,"tags":tagson}
             return render(request, 'article/updata_article.html', context)
     else:
-        return HttpResponse("你没有权限")
+        return redirect('server:illegal_request')
 
 
 @login_required(login_url='usermanage:login')
@@ -133,9 +133,9 @@ def article_delete(request, id):
             article.delete()
             return redirect('article:list')
         else:
-            return HttpResponse('仅允许POST请求')
+            return redirect('server:illegal_request')
     else:
-        return HttpResponse("你没有权限")
+        return redirect('server:illegal_request')
 
 
 class IncreaseLikesView(View):
