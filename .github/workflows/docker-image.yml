@@ -20,9 +20,15 @@ jobs:
       run: |
         python manage.py test
 
-  build:
+  build_and_push:
     runs-on: ubuntu-latest
     steps:
+    - name: login to ARC
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ secrets.REGISTRY_NAME }}
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
     - uses: actions/checkout@v4
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag NCNet
@@ -34,6 +40,13 @@ jobs:
          files: image.tar
       env:
          GITHUB_TOKEN: ${ secrets.GITHUB_TOKEN }}
+    - name: bulid and push in ARC
+      env:
+         IMAGE_TAG: ${{ github.sha }}
+      run: |
+         docker build -t ${{ secrets.REGISTRY_NAME }}:$IMAGE_TAG .
+         docker push ${{ secrets.REGISTRY_NAME }}:$IMAGE_TAG
+      
 
 
 
