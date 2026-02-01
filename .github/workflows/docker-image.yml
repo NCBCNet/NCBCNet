@@ -31,9 +31,9 @@ jobs:
         password: ${{ secrets.REGISTRY_PASSWORD }}
     - uses: actions/checkout@v4
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag NCNet
+      run: docker build . --file Dockerfile --tag ncnet
     - name: Save Docker image to tar
-      run: docker save NCNet -o image.tar
+      run: docker save ncnet -o image.tar
     - name: Upload Docker image to release
       uses: softprops/action-gh-release@v1
       with:
