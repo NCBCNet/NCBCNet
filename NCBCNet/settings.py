@@ -28,8 +28,8 @@ with open(file_path, 'r') as f:
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
-DAPHNEON_IN_DEBUG = True
-
+DAPHNEON_IN_DEBUG = False
+# 一定注意生产环境下将上面两个调为Flase！！！
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'ncnetstudent.top', '.ncnetstudent.top']
 
 # Security Settings
@@ -83,7 +83,7 @@ MIDDLEWARE = [
 
 if DEBUG:
     INSTALLED_APPS.append("sslserver")
-if DAPHNEON_IN_DEBUG:
+if DAPHNEON_IN_DEBUG or DEBUG:
     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
@@ -249,18 +249,19 @@ SIMPLEUI_ANALYSIS = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
-STATIC_STATUS = False
 if DAPHNEON_IN_DEBUG:
     staticfiles_path = os.path.join(BASE_DIR, "staticfiles/")
+    media_path = os.path.join(BASE_DIR, "media/")
 else:
     staticfiles_path = "/usr/staticfiles/"
+    media_path = "/usr/mediafiles/"
 STATIC_ROOT = staticfiles_path
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static/'),  # 添加此项
 ]
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+MEDIA_ROOT = media_path
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
