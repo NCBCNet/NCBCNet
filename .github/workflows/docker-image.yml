@@ -18,9 +18,9 @@ jobs:
         pip install -r requirements.txt
     - name: Run Tests
       run: |
-        python manage.py test
-
+        python manage.py test --settings=NCBCNet.test_settings
   build_and_push:
+    needs: test
     runs-on: ubuntu-latest
     steps:
     - name: login to ARC
