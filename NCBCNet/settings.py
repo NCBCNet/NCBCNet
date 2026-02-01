@@ -28,7 +28,7 @@ with open(file_path, 'r') as f:
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
-DAPHNEON = True
+DAPHNEON_IN_DEBUG = True
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'ncnetstudent.top', '.ncnetstudent.top']
 
@@ -83,10 +83,9 @@ MIDDLEWARE = [
 
 if DEBUG:
     INSTALLED_APPS.append("sslserver")
-    if DAPHNEON:
-        MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
+if DAPHNEON_IN_DEBUG:
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 ROOT_URLCONF = 'NCBCNet.urls'
 
@@ -146,7 +145,7 @@ WSGI_APPLICATION = 'NCBCNet.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 # 生产环境使用MySQL数据库，开发环境使用SQLite数据库
 
-if DEBUG:
+if DEBUG or DAPHNEON_IN_DEBUG:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -251,7 +250,7 @@ SIMPLEUI_ANALYSIS = False
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 STATIC_STATUS = False
-if STATIC_STATUS:
+if DAPHNEON_IN_DEBUG:
     staticfiles_path = os.path.join(BASE_DIR, "staticfiles/")
 else:
     staticfiles_path = "/usr/staticfiles/"

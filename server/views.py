@@ -11,3 +11,6 @@ def easter_egg_1(request):
 
 def about(request):
         return render(request,'server/about.html')
+
+def illegal_request(request):
+    return render(request,'server/illegal_request.html')

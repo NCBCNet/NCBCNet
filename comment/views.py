@@ -35,4 +35,4 @@ def post_comment(request,article_id,parent_comment_id=None):
         }
         return render(request,'comment/reply.html',context)
     else:
-        return HttpResponse("发表评论仅接受GET/POST请求。")
+        return redirect('server:illegal_request')

@@ -8,4 +8,5 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('about/', views.about, name='about'),
     path('easter_egg/114514/1/',views.easter_egg_1,name='easter_egg_1'),
+    path('illegal_request/',views.illegal_request,name='illegal_request'),
 ]
