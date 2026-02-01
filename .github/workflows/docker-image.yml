@@ -30,16 +30,24 @@ jobs:
         username: ${{ secrets.REGISTRY_USERNAME }}
         password: ${{ secrets.REGISTRY_PASSWORD }}
     - uses: actions/checkout@v4
+    - name: create tag
+      run: |
+        git tag v1.0.0
+        git push origin v1.0.0
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag ncnet
     - name: Save Docker image to tar
       run: docker save ncnet -o image.tar
     - name: Upload Docker image to release
       uses: softprops/action-gh-release@v1
-      with:
-         files: image.tar
       env:
          GITHUB_TOKEN: ${ secrets.GITHUB_TOKEN }}
+      with:
+        files: image.tar
+        tag_name: v1.0.0
+        release_name: v1.0.0
+        draft: false
+        prerelease: false
     - name: bulid and push in ARC
       env:
          IMAGE_TAG: ${{ github.sha }}
