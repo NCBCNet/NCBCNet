@@ -12,9 +12,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      run: docker build . --file Dockerfile --tag NCNet
     - name: Save Docker image to tar
-      run: docker save my-app:${GITHUB_REF#refs/tags/} -o image.tar
+      run: docker save NCNet -o image.tar
     - name: Upload Docker image to release
       uses: softprops/action-gh-release@v1
       with:
