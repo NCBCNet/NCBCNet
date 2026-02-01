@@ -32,7 +32,7 @@ urlpatterns = [
     path('usermanage/',include('usermanage.urls',namespace='usermanage')),
     path('comment/', include('comment.urls', namespace='comment')),
     path(r'mdeditor/', include('mdeditor.urls')),
-    # path('file_up/',include('file_save.urls',namespace='file_save')),
+    path('file_up/',include('file_save.urls',namespace='file_save')),
     # path('^inbox/notifications/', include(notifications.urls, namespace='notifications')),
 
 ]

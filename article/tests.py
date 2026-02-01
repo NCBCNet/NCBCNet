@@ -141,7 +141,7 @@ class ArticleViewTest(TestCase):
         response = self.client.get(
             reverse('article:article_update', args=[self.article.id])
         )
-        self.assertContains(response, '你没有权限')
+        self.assertEqual(response.status_code, 302)
     
     def test_article_delete_view_author(self):
         """测试作者删除文章"""

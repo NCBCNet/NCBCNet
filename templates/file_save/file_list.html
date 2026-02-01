@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}
+    - 云上网盘
+{% endblock %}
+{% block content %}
+    <div class="container mt-4">
+    {% if user.is_authenticated %}
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="mb-0">云上网盘</h1>
+                <p class="mb-0 text-muted">欢迎使用南城巴川云上网盘服务！在这里，您可以上传、管理和分享您的文件。</p>
+            </div>
+            <div class="mb-3">
+
+            </div>
+            <form class="d-flex align-items-center gap-2" method="POST" enctype="multipart/form-data" action=".">
+                {% csrf_token %}
+                <label for="file" class="form-label"></label>
+                <input class="form-control" type="file" id="file" name="file" required>
+                <button type="submit" class="btn btn-primary">上传</button>
+            </form>
+        </div>
+        <hr>
+        <h3>文件列表</h3>
+        {% if files %}
+            <ul class="list-group">
+                {% for file in files %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="{{ file.file.url }}" target="_blank">{{ file }}</a>
+                        <span class="badge bg-primary rounded-pill">{{ file.uploaded_at|date:"Y-m-d H:i" }}</span>
+                        <button class="btn btn-primary" type="button" onclick="confirm_delete({{ file.id }})">删除</button>
+                        <form id="safe_delete_file_{{ file.id }}" method="POST" action="{% url 'file_save:file_delete' file.id %}" style="display: none;">
+                            {% csrf_token %}
+                            <button type="submit">f</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>还没有上传任何文件。</p>
+        {% endif %}
+    {% else %}
+        <p>请先登录以访问您的云上网盘。</p>
+    {% endif %}
+    </div>
+{% endblock %}
+{% block script %}
+    <script>
+    function confirm_delete(id) {
+            // 调用layer弹窗组件
+            layer.open({
+                // 弹窗标题
+                title: "确认删除",
+                // 正文
+                content: "确认删除这个文件吗？",
+                // 点击确定按钮后调用的回调函数
+                yes: function (index, layero) {
+                    const form = document.getElementById(`safe_delete_file_${id}`);
+                    form.submit();
+                    layer.close(index);
+                },
+            })
+        }
+    </script>
+{% endblock %}
