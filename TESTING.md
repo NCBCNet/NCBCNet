@@ -3,7 +3,6 @@
 ## 概述 / Overview
 
 本项目包含了完整的Django网站测试样本，覆盖了以下应用的功能测试：
-This project contains comprehensive Django website test samples covering functional tests for the following apps:
 
 - **Article (文章)**: 文章模型和视图测试
 - **Comment (评论)**: 评论系统和MPTT树状结构测试

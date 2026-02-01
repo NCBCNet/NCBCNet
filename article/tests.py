@@ -1,3 +1,5 @@
+from time import sleep
+
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -7,19 +9,19 @@ from .models import Article, ArticleColumn
 
 class ArticleColumnModelTest(TestCase):
     """测试ArticleColumn模型"""
-    
+
     def setUp(self):
         """设置测试数据"""
         self.column = ArticleColumn.objects.create(
             title='技术专栏',
             created=timezone.now()
         )
-    
+
     def test_column_creation(self):
         """测试专栏创建"""
         self.assertTrue(isinstance(self.column, ArticleColumn))
         self.assertEqual(self.column.__str__(), self.column.title)
-    
+
     def test_column_title(self):
         """测试专栏标题"""
         self.assertEqual(self.column.title, '技术专栏')
@@ -27,7 +29,7 @@ class ArticleColumnModelTest(TestCase):
 
 class ArticleModelTest(TestCase):
     """测试Article模型"""
-    
+
     def setUp(self):
         """设置测试数据"""
         self.user = User.objects.create_user(
@@ -46,29 +48,30 @@ class ArticleModelTest(TestCase):
             likes=0,
             total_views=0
         )
-    
+
     def test_article_creation(self):
         """测试文章创建"""
         self.assertTrue(isinstance(self.article, Article))
         self.assertEqual(self.article.__str__(), self.article.title)
-    
+
     def test_article_content(self):
         """测试文章内容"""
         self.assertEqual(self.article.title, '测试文章标题')
         self.assertEqual(self.article.content, '这是一篇测试文章的内容')
         self.assertEqual(self.article.author.username, 'testuser')
-    
+
     def test_article_column_relation(self):
         """测试文章与专栏的关系"""
         self.assertEqual(self.article.column, self.column)
         self.assertIn(self.article, self.column.article.all())
-    
+
     def test_article_get_absolute_url(self):
         """测试文章URL"""
         url = self.article.get_absolute_url()
         self.assertEqual(url, reverse('article:article_detail', args=[self.article.id]))
-    
+
     def test_article_ordering(self):
+        sleep(0.01)  # 确保创建时间不同
         """测试文章排序"""
         article2 = Article.objects.create(
             author=self.user,
