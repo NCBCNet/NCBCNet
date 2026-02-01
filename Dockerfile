@@ -6,7 +6,6 @@ RUN python -m pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/sim
 RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 RUN apt-get install -y supervisor
 COPY . .
-RUN mkdir logs
 COPY private.key /usr/server/private.key
 COPY certificate.crt /usr/server/certificate.crt
 EXPOSE 443
