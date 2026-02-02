@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
-
+from datetime import datetime
 from daphne.apps import DaphneConfig
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -30,7 +30,7 @@ with open(file_path, 'r') as f:
 DEBUG = False
 DAPHNEON_IN_DEBUG = False
 # 一定注意生产环境下将上面两个调为Flase！！！
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'ncnetstudent.top', '.ncnetstudent.top']
+ALLOWED_HOSTS = ['*']
 
 # Security Settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -184,6 +184,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+desktop_log_dir = "logs"
+os.makedirs(desktop_log_dir, exist_ok=True)
+logfile_name = f"debug_{datetime.now().strftime('%Y.%m.%d')}.log"
+logfile_path = os.path.join(desktop_log_dir, logfile_name)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -211,11 +216,8 @@ LOGGING = {
         },
         'file': {
             'level': 'INFO',
-            # 'class': 'logging.FileHandler',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'when': 'midnight',
-            'backupCount': 30,
-            'filename': os.path.join(BASE_DIR, 'logs/debug.log'),
+            'class': 'logging.FileHandler',
+            'filename': logfile_path,
             'formatter': 'verbose',
         },
     },
