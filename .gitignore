@@ -1,11 +1,8 @@
 .idea
-SECRET
-logs/
 *.log
 __pycache__/
 *.pyc
 *.pyo
-db.sqlite3
 media/
 staticfiles/
 *.pyc
