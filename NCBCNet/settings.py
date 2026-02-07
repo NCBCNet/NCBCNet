@@ -156,9 +156,9 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': "ncbcnetdb",
-            'USER': "ncbcnetserver",
-            'PASSWORD': "Ncbcnet@2024",
+            'NAME': "ncnetdb",
+            'USER': "ncnet",
+            'PASSWORD': "dbuserpassword",
             'HOST': "127.0.0.1",
             'PORT': "3306",
         }
