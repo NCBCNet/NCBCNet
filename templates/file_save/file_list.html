@@ -120,10 +120,7 @@
             <div class="col-md-4">
                 <div class="stats-card">
                     <h6 class="text-muted">总大小</h6>
-                    <h3><i class="fas fa-database text-success"></i> 
-                        {% widthratio files|length 1 1 as file_count %}
-                        {{ files|length }} 项
-                    </h3>
+                    <h3><i class="fas fa-database text-success"></i> {{ files|length }} 项</h3>
                 </div>
             </div>
         </div>
@@ -249,6 +246,10 @@
     <script>
     let uploadXHR = null;
     let startTime = null;
+    
+    // Constants
+    const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024; // 100MB
+    const AUTO_RELOAD_DELAY = 3000; // 3 seconds
     
     function confirmFileDelete(id) {
         layer.open({
@@ -376,7 +377,7 @@
                 // 3秒后自动刷新页面
                 setTimeout(function() {
                     window.location.reload();
-                }, 3000);
+                }, AUTO_RELOAD_DELAY);
             } else {
                 // 上传失败
                 document.getElementById('uploadError').style.display = 'block';
@@ -434,7 +435,7 @@
         if (this.files[0]) {
             const fileSize = this.files[0].size;
             const fileName = this.files[0].name;
-            if (fileSize > 100 * 1024 * 1024) { // 大于100MB
+            if (fileSize > LARGE_FILE_THRESHOLD) {
                 layer.msg('已选择大文件: ' + fileName + ' (' + formatFileSize(fileSize) + ')', {time: 2000});
             }
         }

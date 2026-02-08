@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, JsonResponse, FileResponse
 from django.views.decorators.http import require_http_methods
+from django.urls import reverse
 from .models import UploadedFile, Folder
 from .forms import UploadedFileForm, FolderForm
 from django.shortcuts import redirect
@@ -64,7 +65,7 @@ def FileUpload(request):
         
         folder_id = request.POST.get('current_folder')
         if folder_id:
-            return redirect(f'/file_save/file_list/?folder={folder_id}')
+            return redirect(f"{reverse('file_save:file_list')}?folder={folder_id}")
         return redirect('file_save:file_list')
     else:
         return HttpResponse(form.errors, status=400)
@@ -79,7 +80,7 @@ def FileDelete(request, id):
         file_instance.delete()  # 删除数据库记录
         
         if folder_id:
-            return redirect(f'/file_save/file_list/?folder={folder_id}')
+            return redirect(f"{reverse('file_save:file_list')}?folder={folder_id}")
         return redirect('file_save:file_list')
     except UploadedFile.DoesNotExist:
         return HttpResponse("文件未找到", status=404)
@@ -99,7 +100,7 @@ def FolderCreate(request):
         try:
             folder.save()
             if parent_id:
-                return redirect(f'/file_save/file_list/?folder={parent_id}')
+                return redirect(f"{reverse('file_save:file_list')}?folder={parent_id}")
             return redirect('file_save:file_list')
         except Exception as e:
             return HttpResponse(f"创建文件夹失败: {str(e)}", status=400)
@@ -115,7 +116,7 @@ def FolderDelete(request, id):
         folder.delete()  # 级联删除子文件夹和文件
         
         if parent_id:
-            return redirect(f'/file_save/file_list/?folder={parent_id}')
+            return redirect(f"{reverse('file_save:file_list')}?folder={parent_id}")
         return redirect('file_save:file_list')
     except Folder.DoesNotExist:
         return HttpResponse("文件夹未找到", status=404)
@@ -134,8 +135,9 @@ def FileDownload(request, id):
     
     # 在生产环境中使用 nginx X-Accel-Redirect
     file_path = file_instance.file.path
-    # 将实际路径转换为 nginx 内部路径
-    internal_path = file_path.replace(settings.MEDIA_ROOT, '/protected')
+    # 使用 os.path.relpath 确保路径正确
+    relative_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
+    internal_path = '/protected/' + relative_path.replace('\\', '/')  # 处理 Windows 路径
     
     response = HttpResponse()
     response['Content-Type'] = 'application/octet-stream'
