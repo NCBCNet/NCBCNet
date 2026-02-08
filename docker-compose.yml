@@ -28,8 +28,8 @@ services:
     container_name: mysql-db
     environment:
       MYSQL_ROOT_PASSWORD: ;P7HRtH88Wn2tqCnwwES
-      MYSQL_DATABASE: ncbcnetdb
-      MYSQL_USER: ncbcnetserver
+      MYSQL_DATABASE: ncnetdb
+      MYSQL_USER: ncnet
       MYSQL_PASSWORD: Ncbcnet@2024
     ports:
       - "3306:3306"      # 映射数据库服务端口
