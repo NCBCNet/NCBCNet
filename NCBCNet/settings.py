@@ -27,8 +27,8 @@ with open(file_path, 'r') as f:
     SECRET_KEY = file_content
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-DAPHNEON_IN_DEBUG = False
+DEBUG = True
+DAPHNEON_IN_DEBUG = True
 # 一定注意生产环境下将上面两个调为Flase！！！
 ALLOWED_HOSTS = ['*']
 
