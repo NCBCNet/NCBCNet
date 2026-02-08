@@ -21,6 +21,27 @@ class Folder(models.Model):
         if self.parent:
             return os.path.join(self.parent.get_path(), self.name)
         return self.name
+    
+    def delete(self, *args, **kwargs):
+        """重写删除方法，确保删除文件夹时也删除其中的所有物理文件"""
+        # 1. 递归删除所有子文件夹中的文件
+        for subfolder in self.subfolders.all():
+            subfolder.delete()  # 递归调用，会删除子文件夹的文件
+        
+        # 2. 删除当前文件夹中的所有文件（物理文件）
+        for file in self.files.all():
+            # 删除物理文件
+            if file.file:
+                try:
+                    file.file.delete(save=False)  # save=False 防止再次保存数据库
+                except Exception as e:
+                    # 如果文件已经不存在，继续删除数据库记录
+                    pass
+            # 删除数据库记录
+            file.delete()
+        
+        # 3. 最后删除文件夹本身的数据库记录
+        super().delete(*args, **kwargs)
 
 class UploadedFile(models.Model):
     file = models.FileField(upload_to='uploads/')

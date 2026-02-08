@@ -10,6 +10,7 @@ from django.db.models import Q
 from asgiref.sync import sync_to_async
 import os
 import asyncio
+from urllib.parse import quote
 from django.conf import settings
 
 # Async file iterator for streaming downloads
@@ -163,6 +164,13 @@ async def FileDownload(request, id):
         UploadedFile, id=id, owner=request.user
     )
     
+    # 获取原始文件名
+    original_name = file_instance.original_name
+    
+    # 根据 RFC 5987 编码文件名，支持中文和特殊字符
+    # 使用 filename* 参数，浏览器会优先使用这个
+    encoded_filename = quote(original_name, safe='')
+    
     # 在开发环境中使用异步流式传输
     if settings.DEBUG:
         # 异步打开文件
@@ -173,7 +181,8 @@ async def FileDownload(request, id):
             async_file_iterator(file_obj),
             content_type='application/octet-stream'
         )
-        response['Content-Disposition'] = f'attachment; filename="{file_instance.original_name}"'
+        # 使用 RFC 5987 标准的 filename* 参数，确保中文文件名正确显示
+        response['Content-Disposition'] = f"attachment; filename=\"{original_name}\"; filename*=UTF-8''{encoded_filename}"
         response['Content-Length'] = file_instance.file_size
         return response
     
@@ -185,6 +194,7 @@ async def FileDownload(request, id):
     
     response = HttpResponse()
     response['Content-Type'] = 'application/octet-stream'
-    response['Content-Disposition'] = f'attachment; filename="{file_instance.original_name}"'
+    # 使用 RFC 5987 标准的 filename* 参数，确保中文文件名正确显示
+    response['Content-Disposition'] = f"attachment; filename=\"{original_name}\"; filename*=UTF-8''{encoded_filename}"
     response['X-Accel-Redirect'] = internal_path
     return response
