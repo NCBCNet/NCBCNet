@@ -1,14 +1,25 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse, JsonResponse, FileResponse
+from django.http import HttpResponse, JsonResponse, FileResponse, StreamingHttpResponse
 from django.views.decorators.http import require_http_methods
 from django.urls import reverse
 from .models import UploadedFile, Folder
 from .forms import UploadedFileForm, FolderForm
 from django.shortcuts import redirect
 from django.db.models import Q
+from asgiref.sync import sync_to_async
 import os
+import asyncio
 from django.conf import settings
+
+# Async file iterator for streaming downloads
+async def async_file_iterator(file_object, chunk_size=8192):
+    """Asynchronously iterate over file chunks"""
+    while True:
+        chunk = await sync_to_async(file_object.read)(chunk_size)
+        if not chunk:
+            break
+        yield chunk
 
 # Create your views here.
 @login_required(login_url='usermanage:login')
@@ -54,21 +65,44 @@ def FileList(request):
 
 @login_required(login_url='usermanage:login')
 @require_http_methods(["POST"])
-def FileUpload(request):
-    form = UploadedFileForm(request.POST, request.FILES, user=request.user)
-    if form.is_valid():
-        uploaded_file = form.save(commit=False)
+async def FileUpload(request):
+    """异步文件上传视图"""
+    # 使用 sync_to_async 处理表单验证
+    form = await sync_to_async(UploadedFileForm)(
+        request.POST, request.FILES, user=request.user
+    )
+    
+    # 异步验证表单
+    is_valid = await sync_to_async(form.is_valid)()
+    
+    if is_valid:
+        # 异步保存文件
+        uploaded_file = await sync_to_async(form.save)(commit=False)
         uploaded_file.owner = request.user
         uploaded_file.original_name = request.FILES['file'].name
         uploaded_file.file_size = request.FILES['file'].size
-        uploaded_file.save()
+        
+        # 异步保存到数据库
+        await sync_to_async(uploaded_file.save)()
         
         folder_id = request.POST.get('current_folder')
-        if folder_id:
-            return redirect(f"{reverse('file_save:file_list')}?folder={folder_id}")
-        return redirect('file_save:file_list')
+        
+        # 返回 JSON 响应给 AJAX 请求
+        return JsonResponse({
+            'success': True,
+            'message': '文件上传成功',
+            'file_id': uploaded_file.id,
+            'file_name': uploaded_file.original_name,
+            'redirect_url': f"{reverse('file_save:file_list')}?folder={folder_id}" if folder_id else reverse('file_save:file_list')
+        })
     else:
-        return HttpResponse(form.errors, status=400)
+        # 获取表单错误
+        errors = await sync_to_async(lambda: form.errors.as_json())()
+        return JsonResponse({
+            'success': False,
+            'message': '文件上传失败',
+            'errors': errors
+        }, status=400)
 
 @login_required(login_url='usermanage:login')
 @require_http_methods(["POST"])
@@ -122,19 +156,29 @@ def FolderDelete(request, id):
         return HttpResponse("文件夹未找到", status=404)
 
 @login_required(login_url='usermanage:login')
-def FileDownload(request, id):
-    """使用 nginx X-Accel-Redirect 进行高效下载"""
-    file_instance = get_object_or_404(UploadedFile, id=id, owner=request.user)
+async def FileDownload(request, id):
+    """异步文件下载视图 - 使用 nginx X-Accel-Redirect 进行高效下载"""
+    # 异步获取文件实例
+    file_instance = await sync_to_async(get_object_or_404)(
+        UploadedFile, id=id, owner=request.user
+    )
     
-    # 在开发环境中直接返回文件
+    # 在开发环境中使用异步流式传输
     if settings.DEBUG:
-        response = FileResponse(file_instance.file.open('rb'))
-        response['Content-Type'] = 'application/octet-stream'
+        # 异步打开文件
+        file_obj = await sync_to_async(file_instance.file.open)('rb')
+        
+        # 创建流式响应
+        response = StreamingHttpResponse(
+            async_file_iterator(file_obj),
+            content_type='application/octet-stream'
+        )
         response['Content-Disposition'] = f'attachment; filename="{file_instance.original_name}"'
+        response['Content-Length'] = file_instance.file_size
         return response
     
-    # 在生产环境中使用 nginx X-Accel-Redirect
-    file_path = file_instance.file.path
+    # 在生产环境中使用 nginx X-Accel-Redirect（nginx 处理异步）
+    file_path = await sync_to_async(lambda: file_instance.file.path)()
     # 使用 os.path.relpath 确保路径正确
     relative_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
     internal_path = '/protected/' + relative_path.replace('\\', '/')  # 处理 Windows 路径

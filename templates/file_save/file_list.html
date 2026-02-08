@@ -367,19 +367,40 @@
         
         // 上传完成事件
         uploadXHR.addEventListener('load', function() {
-            if (uploadXHR.status === 200 || uploadXHR.status === 302) {
-                // 上传成功
-                document.getElementById('uploadSuccess').style.display = 'block';
-                document.getElementById('uploadProgressBar').className = 'progress-bar bg-success';
-                document.getElementById('cancelUploadBtn').style.display = 'none';
-                document.getElementById('closeUploadBtn').style.display = 'inline-block';
-                
-                // 3秒后自动刷新页面
-                setTimeout(function() {
-                    window.location.reload();
-                }, AUTO_RELOAD_DELAY);
+            if (uploadXHR.status === 200) {
+                // 解析 JSON 响应
+                try {
+                    const response = JSON.parse(uploadXHR.responseText);
+                    if (response.success) {
+                        // 上传成功
+                        document.getElementById('uploadSuccess').style.display = 'block';
+                        document.getElementById('uploadProgressBar').className = 'progress-bar bg-success';
+                        document.getElementById('cancelUploadBtn').style.display = 'none';
+                        document.getElementById('closeUploadBtn').style.display = 'inline-block';
+                        
+                        // 3秒后跳转到指定页面
+                        setTimeout(function() {
+                            window.location.href = response.redirect_url;
+                        }, AUTO_RELOAD_DELAY);
+                    } else {
+                        // 上传失败
+                        document.getElementById('uploadError').style.display = 'block';
+                        document.getElementById('uploadErrorMsg').textContent = 
+                            response.message || '上传失败';
+                        document.getElementById('uploadProgressBar').className = 'progress-bar bg-danger';
+                        document.getElementById('cancelUploadBtn').style.display = 'none';
+                        document.getElementById('closeUploadBtn').style.display = 'inline-block';
+                    }
+                } catch (e) {
+                    // JSON 解析失败
+                    document.getElementById('uploadError').style.display = 'block';
+                    document.getElementById('uploadErrorMsg').textContent = '响应解析失败';
+                    document.getElementById('uploadProgressBar').className = 'progress-bar bg-danger';
+                    document.getElementById('cancelUploadBtn').style.display = 'none';
+                    document.getElementById('closeUploadBtn').style.display = 'inline-block';
+                }
             } else {
-                // 上传失败
+                // HTTP 错误
                 document.getElementById('uploadError').style.display = 'block';
                 document.getElementById('uploadErrorMsg').textContent = 
                     '上传失败 (错误代码: ' + uploadXHR.status + ')';
