@@ -7,3 +7,4 @@ media/
 staticfiles/
 *.pyc
 *.pyc
+requirements_tmp.txt
