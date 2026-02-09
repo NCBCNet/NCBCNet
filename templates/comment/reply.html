@@ -25,11 +25,19 @@
         <!-- csrf token -->
         <script src="{% static 'csrf.js' %}"></script>
         <script>
-            $(function (){
-                $(".django-ckeditor-widget").removeAttr('style');
-            });
             function confirm_submit(article_id, comment_id){
-                let content = CKEDITOR.instances['id_content'].getData();
+                // Get CKEditor 5 instance
+                const editorElement = document.querySelector('[name="content"]');
+                let content = '';
+                
+                // Try to get CKEditor 5 instance data
+                if (editorElement && editorElement.ckeditorInstance) {
+                    content = editorElement.ckeditorInstance.getData();
+                } else {
+                    // Fallback to textarea value
+                    content = editorElement ? editorElement.value : '';
+                }
+                
                 $.ajax({
                     url: '/comment/post-comment/' + article_id + '/' + comment_id + '/',
                     type: "POST",

@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from article.models import Article
 from mptt.models import MPTTModel,TreeForeignKey
-from ckeditor.fields import RichTextField
+from django_ckeditor_5.fields import CKEditor5Field
 # Create your models here.
 
 class Comment(MPTTModel):
@@ -10,7 +10,7 @@ class Comment(MPTTModel):
     reply_to = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='replyers')
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
-    content = RichTextField()
+    content = CKEditor5Field(config_name='extends')
     created = models.DateTimeField(auto_now_add=True)
 
     # class Meta:
