@@ -167,9 +167,22 @@ async def FileDownload(request, id):
     # 获取原始文件名
     original_name = file_instance.original_name
     
-    # 根据 RFC 5987 编码文件名，支持中文和特殊字符
-    # 使用 filename* 参数，浏览器会优先使用这个
-    encoded_filename = quote(original_name, safe='')
+    # 根据 RFC 5987 和 RFC 2231 编码文件名
+    # filename 参数使用 ASCII 安全的名称作为后备
+    # filename* 参数使用 UTF-8 编码的完整文件名
+    encoded_filename = quote(original_name.encode('utf-8'), safe='')
+    
+    # 创建 ASCII 安全的后备文件名
+    # 尝试提取文件扩展名
+    if '.' in original_name:
+        ext = original_name.rsplit('.', 1)[1]
+        ascii_fallback = f"download.{ext}"
+    else:
+        ascii_fallback = "download"
+    
+    # 构建符合 RFC 5987 标准的 Content-Disposition 头
+    # 注意：filename 参数不应包含非 ASCII 字符
+    content_disposition = f'attachment; filename="{ascii_fallback}"; filename*=UTF-8\'\'{encoded_filename}'
     
     # 在开发环境中使用异步流式传输
     if settings.DEBUG:
@@ -181,8 +194,7 @@ async def FileDownload(request, id):
             async_file_iterator(file_obj),
             content_type='application/octet-stream'
         )
-        # 使用 RFC 5987 标准的 filename* 参数，确保中文文件名正确显示
-        response['Content-Disposition'] = f"attachment; filename=\"{original_name}\"; filename*=UTF-8''{encoded_filename}"
+        response['Content-Disposition'] = content_disposition
         response['Content-Length'] = file_instance.file_size
         return response
     
@@ -194,7 +206,6 @@ async def FileDownload(request, id):
     
     response = HttpResponse()
     response['Content-Type'] = 'application/octet-stream'
-    # 使用 RFC 5987 标准的 filename* 参数，确保中文文件名正确显示
-    response['Content-Disposition'] = f"attachment; filename=\"{original_name}\"; filename*=UTF-8''{encoded_filename}"
+    response['Content-Disposition'] = content_disposition
     response['X-Accel-Redirect'] = internal_path
     return response
