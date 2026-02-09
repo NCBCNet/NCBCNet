@@ -165,6 +165,8 @@
                             </h6>
                             <small class="text-muted d-block">{{ file.get_file_size_display }}</small>
                             <small class="text-muted d-block">{{ file.uploaded_at|date:"Y-m-d H:i" }}</small>
+                            <br>
+                            <small class="text-muted d-block">{{ file.owner.username }}</small>
                             <div class="action-buttons mt-2 justify-content-center">
                                 <a href="{% url 'file_save:file_download' file.id %}" class="btn btn-sm btn-primary" title="下载">
                                     <i class="fas fa-download"></i>
