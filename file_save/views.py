@@ -218,7 +218,8 @@ async def FolderDelete(request, id):
         folder = await Folder.objects.select_related('parent').aget(id=id, owner=user)
         parent_id = folder.parent.id if folder.parent else None
         
-        # 使用sync_to_async包装delete方法，因为它可能涉及删除物理文件
+        # The Folder model has a custom delete() method that handles cascade deletion
+        # of subfolders and physical files, so we need to use sync_to_async
         await sync_to_async(folder.delete)()
         
         if parent_id:
