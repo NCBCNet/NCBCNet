@@ -31,7 +31,7 @@ async def FileList(request):
         if shared_form.is_valid():
             file_id = shared_form.cleaned_data['shared_target']
             try:
-                file_instance = await UploadedFile.objects.aget(id=file_id, owner=request.user)
+                file_instance = await UploadedFile.objects.select_related('folder').aget(id=file_id, owner=request.user)
                 file_instance.share = not file_instance.share
                 await file_instance.asave()
                 folder_id = file_instance.folder.id if file_instance.folder else None
@@ -81,7 +81,7 @@ async def FileList(request):
         file_form = UploadedFileForm(user=request.user)
         folder_form = FolderForm()
         is_shared_files = await sync_to_async(shared_files.exists)()
-        is_files = await sync_to_async(files.exists)() or sync_to_async(folders.exists)()
+        is_files = await sync_to_async(files.exists)() or await sync_to_async(folders.exists)()
         context = {
             'files': files,
             'folders': folders,
@@ -142,12 +142,17 @@ async def FileUpload(request):
 
 @login_required(login_url='usermanage:login')
 @require_http_methods(["POST"])
-def FileDelete(request, id):
+async def FileDelete(request, id):
+    """异步文件删除视图"""
     try:
-        file_instance = get_object_or_404(UploadedFile, id=id, owner=request.user)
+        # 异步获取文件实例，预加载folder关系
+        file_instance = await UploadedFile.objects.select_related('folder').aget(id=id, owner=request.user)
         folder_id = file_instance.folder.id if file_instance.folder else None
-        file_instance.file.delete()  # 删除文件
-        file_instance.delete()  # 删除数据库记录
+        
+        # 删除物理文件（同步操作，但在async视图中使用sync_to_async包装）
+        await sync_to_async(file_instance.file.delete)()
+        # 删除数据库记录
+        await file_instance.adelete()
         
         if folder_id:
             return redirect(f"{reverse('file_save:file_list')}?folder={folder_id}")
@@ -157,33 +162,46 @@ def FileDelete(request, id):
 
 @login_required(login_url='usermanage:login')
 @require_http_methods(["POST"])
-def FolderCreate(request):
-    form = FolderForm(request.POST)
-    if form.is_valid():
-        folder = form.save(commit=False)
-        folder.owner = request.user
-        
-        parent_id = request.POST.get('parent_folder')
-        if parent_id:
-            folder.parent = get_object_or_404(Folder, id=parent_id, owner=request.user)
-        
+async def FolderCreate(request):
+    """异步文件夹创建视图"""
+    # 直接从POST数据创建文件夹，不使用表单的save方法
+    folder_name = request.POST.get('name', '').strip()
+    
+    if not folder_name:
+        return HttpResponse("文件夹名称不能为空", status=400)
+    
+    # Get user asynchronously
+    user = await sync_to_async(lambda: request.user)()
+    
+    # 创建文件夹对象
+    folder = Folder(name=folder_name, owner=user)
+    
+    parent_id = request.POST.get('parent_folder')
+    if parent_id:
         try:
-            folder.save()
-            if parent_id:
-                return redirect(f"{reverse('file_save:file_list')}?folder={parent_id}")
-            return redirect('file_save:file_list')
-        except Exception as e:
-            return HttpResponse(f"创建文件夹失败: {str(e)}", status=400)
-    else:
-        return HttpResponse(form.errors, status=400)
+            folder.parent = await Folder.objects.aget(id=parent_id, owner=user)
+        except Folder.DoesNotExist:
+            return HttpResponse("父文件夹未找到", status=404)
+    
+    try:
+        await folder.asave()
+        if parent_id:
+            return redirect(f"{reverse('file_save:file_list')}?folder={parent_id}")
+        return redirect('file_save:file_list')
+    except Exception as e:
+        return HttpResponse(f"创建文件夹失败: {str(e)}", status=400)
 
 @login_required(login_url='usermanage:login')
 @require_http_methods(["POST"])
-def FolderDelete(request, id):
+async def FolderDelete(request, id):
+    """异步文件夹删除视图"""
     try:
-        folder = get_object_or_404(Folder, id=id, owner=request.user)
+        # 异步获取文件夹实例，预加载parent关系
+        folder = await Folder.objects.select_related('parent').aget(id=id, owner=request.user)
         parent_id = folder.parent.id if folder.parent else None
-        folder.delete()  # 级联删除子文件夹和文件
+        
+        # 使用sync_to_async包装delete方法，因为它可能涉及删除物理文件
+        await sync_to_async(folder.delete)()
         
         if parent_id:
             return redirect(f"{reverse('file_save:file_list')}?folder={parent_id}")
@@ -194,16 +212,18 @@ def FolderDelete(request, id):
 @login_required(login_url='usermanage:login')
 async def FileDownload(request, id):
     """异步文件下载视图 - 使用 nginx X-Accel-Redirect 进行高效下载"""
-    # 异步获取文件实例
+    # 异步获取文件实例，使用 select_related 预加载 owner
     try:
-        file_instance = await UploadedFile.objects.aget(id=id)
+        file_instance = await UploadedFile.objects.select_related('owner').aget(id=id)
         if file_instance.share:
             pass
         elif file_instance.owner != request.user:
             return redirect('server:illegal_request')
     except UploadedFile.DoesNotExist:
         raise Http404("文件不存在")
-    file_path = file_instance.file.path
+    
+    # Wrap file path access in sync_to_async
+    file_path = await sync_to_async(lambda: file_instance.file.path)()
     # 获取原始文件名
     original_name = file_instance.original_name
     

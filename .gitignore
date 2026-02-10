@@ -8,3 +8,6 @@ staticfiles/
 *.pyc
 *.pyc
 requirements_tmp.txt
+venv/
+*.sqlite3
+*.sqlite
