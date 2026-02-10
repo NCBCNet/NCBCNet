@@ -1,10 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse, JsonResponse, FileResponse, StreamingHttpResponse
+from django.http import HttpResponse, JsonResponse, FileResponse, StreamingHttpResponse,Http404
 from django.views.decorators.http import require_http_methods
 from django.urls import reverse
 from .models import UploadedFile, Folder
-from .forms import UploadedFileForm, FolderForm
+from .forms import UploadedFileForm, FolderForm, FileShareForm
 from django.shortcuts import redirect
 from django.db.models import Q
 from asgiref.sync import sync_to_async
@@ -12,57 +12,92 @@ import os
 import asyncio
 from urllib.parse import quote
 from django.conf import settings
+import aiofiles
 
 # Async file iterator for streaming downloads
-async def async_file_iterator(file_object, chunk_size=8192):
-    """Asynchronously iterate over file chunks"""
-    while True:
-        chunk = await sync_to_async(file_object.read)(chunk_size)
-        if not chunk:
-            break
-        yield chunk
+async def async_file_iterator(file_path, chunk_size=8192):
+    async with aiofiles.open(file_path, 'rb') as f:
+        while True:
+            chunk = await f.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
 
 # Create your views here.
 @login_required(login_url='usermanage:login')
-def FileList(request):
-    folder_id = request.GET.get('folder')
-    current_folder = None
-    
-    if folder_id:
-        current_folder = get_object_or_404(Folder, id=folder_id, owner=request.user)
-    
-    # 获取当前文件夹下的子文件夹
-    if current_folder:
-        folders = Folder.objects.filter(parent=current_folder, owner=request.user)
+async def FileList(request):
+    if request.method == 'POST':
+        shared_form = FileShareForm(request.POST)
+        if shared_form.is_valid():
+            file_id = shared_form.cleaned_data['shared_target']
+            try:
+                file_instance = await UploadedFile.objects.aget(id=file_id, owner=request.user)
+                file_instance.share = not file_instance.share
+                await file_instance.asave()
+                folder_id = file_instance.folder.id if file_instance.folder else None
+                if folder_id:
+                    return redirect(f"{reverse('file_save:file_list')}?folder={folder_id}")
+                return redirect('file_save:file_list')
+            except UploadedFile.DoesNotExist:
+                raise Http404("文件不存在")
+        else:
+            return HttpResponse("无效的请求", status=400)
     else:
-        folders = Folder.objects.filter(parent=None, owner=request.user)
-    
-    # 获取当前文件夹下的文件
-    if current_folder:
-        files = UploadedFile.objects.filter(folder=current_folder, owner=request.user)
-    else:
-        files = UploadedFile.objects.filter(folder=None, owner=request.user)
-    
-    # 获取面包屑导航
-    breadcrumbs = []
-    if current_folder:
-        temp_folder = current_folder
-        while temp_folder:
-            breadcrumbs.insert(0, temp_folder)
-            temp_folder = temp_folder.parent
-    
-    file_form = UploadedFileForm(user=request.user)
-    folder_form = FolderForm()
-    
-    context = {
-        'files': files,
-        'folders': folders,
-        'current_folder': current_folder,
-        'breadcrumbs': breadcrumbs,
-        'file_form': file_form,
-        'folder_form': folder_form,
-    }
-    return render(request, 'file_save/file_list.html', context)
+        form = FileShareForm()
+        folders_count = 0
+        files_count = 0
+        folder_id = request.GET.get('folder')
+        current_folder = None
+        def query_shared_files():
+            return UploadedFile.objects.filter(share=True).exclude(owner=request.user)
+        shared_files = await sync_to_async(query_shared_files)()
+        if folder_id:
+            current_folder = get_object_or_404(Folder, id=folder_id, owner=request.user)
+
+        # 获取当前文件夹下的子文件夹
+        if current_folder:
+            folders = Folder.objects.filter(parent=current_folder, owner=request.user)
+            folders_count = await folders.acount()
+        else:
+            folders = Folder.objects.filter(parent=None, owner=request.user)
+            folders_count = await folders.acount()
+
+        # 获取当前文件夹下的文件
+        if current_folder:
+            files = UploadedFile.objects.filter(folder=current_folder, owner=request.user)
+            files_count = await files.acount()
+        else:
+            files = UploadedFile.objects.filter(folder=None, owner=request.user)
+            files_count = await files.acount()
+        files_lenth = await sync_to_async(len)(files)
+        # 获取面包屑导航
+        breadcrumbs = []
+        if current_folder:
+            temp_folder = current_folder
+            while temp_folder:
+                breadcrumbs.insert(0, temp_folder)
+                temp_folder = temp_folder.parent
+
+        file_form = UploadedFileForm(user=request.user)
+        folder_form = FolderForm()
+        is_shared_files = await sync_to_async(shared_files.exists)()
+        is_files = await sync_to_async(files.exists)() or sync_to_async(folders.exists)()
+        context = {
+            'files': files,
+            'folders': folders,
+            'folders_count': folders_count,
+            'files_count': files_count,
+            'files_lenth': files_lenth,
+            'current_folder': current_folder,
+            'breadcrumbs': breadcrumbs,
+            'file_form': file_form,
+            'folder_form': folder_form,
+            'share_form': form,
+            'shared_files': shared_files,
+            'is_shared_files': is_shared_files,
+            'is_files': is_files,
+        }
+        return render(request, 'file_save/file_list.html', context)
 
 @login_required(login_url='usermanage:login')
 @require_http_methods(["POST"])
@@ -84,7 +119,7 @@ async def FileUpload(request):
         uploaded_file.file_size = request.FILES['file'].size
         
         # 异步保存到数据库
-        await sync_to_async(uploaded_file.save)()
+        await uploaded_file.asave()
         
         folder_id = request.POST.get('current_folder')
         
@@ -160,10 +195,15 @@ def FolderDelete(request, id):
 async def FileDownload(request, id):
     """异步文件下载视图 - 使用 nginx X-Accel-Redirect 进行高效下载"""
     # 异步获取文件实例
-    file_instance = await sync_to_async(get_object_or_404)(
-        UploadedFile, id=id, owner=request.user
-    )
-    
+    try:
+        file_instance = await UploadedFile.objects.aget(id=id)
+        if file_instance.share:
+            pass
+        elif file_instance.owner != request.user:
+            return redirect('server:illegal_request')
+    except UploadedFile.DoesNotExist:
+        raise Http404("文件不存在")
+    file_path = file_instance.file.path
     # 获取原始文件名
     original_name = file_instance.original_name
     
@@ -186,20 +226,16 @@ async def FileDownload(request, id):
     
     # 在开发环境中使用异步流式传输
     if settings.DEBUG:
-        # 异步打开文件
-        file_obj = await sync_to_async(file_instance.file.open)('rb')
         
         # 创建流式响应
         response = StreamingHttpResponse(
-            async_file_iterator(file_obj),
+            async_file_iterator(file_path),
             content_type='application/octet-stream'
         )
         response['Content-Disposition'] = content_disposition
         response['Content-Length'] = file_instance.file_size
         return response
-    
-    # 在生产环境中使用 nginx X-Accel-Redirect（nginx 处理异步）
-    file_path = await sync_to_async(lambda: file_instance.file.path)()
+
     # 使用 os.path.relpath 确保路径正确
     relative_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
     internal_path = '/protected/' + relative_path.replace('\\', '/')  # 处理 Windows 路径
@@ -209,3 +245,16 @@ async def FileDownload(request, id):
     response['Content-Disposition'] = content_disposition
     response['X-Accel-Redirect'] = internal_path
     return response
+
+# @login_required(login_url='usermanage:login')
+# async def switch_share(request, id):
+#     try:
+#         file_instance = await UploadedFile.objects.aget(id=id, owner=request.user)
+#         file_instance.share = not file_instance.share
+#         await file_instance.asave()
+#         folder_id = file_instance.folder.id if file_instance.folder else None
+#         if folder_id:
+#             return redirect(f"{reverse('file_save:file_list')}?folder={folder_id}")
+#         return redirect('file_save:file_list')
+#     except UploadedFile.DoesNotExist:
+#         raise Http404("文件不存在")

@@ -50,6 +50,7 @@ class UploadedFile(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='files')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     file_size = models.BigIntegerField(default=0)
+    share = models.BooleanField(default=False)
     
     class Meta:
         ordering = ['-uploaded_at']

@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'django_ckeditor_5',
     # 'notifications',
     'mdeditor',
+    'django_ratelimit'
 ]
 
 MIDDLEWARE = [
@@ -79,6 +80,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.csp.ContentSecurityPolicyMiddleware'
 ]
 
 if DEBUG:
@@ -201,6 +203,20 @@ else:
             'PORT': "3306",
         }
     }
+# Redis 缓存配置
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1", # /1 表示使用 Redis 的 1 号数据库
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # 如果 Redis 设置了密码，取消下面这行的注释
+            # "PASSWORD": "你的密码",
+        }
+    }
+}
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
 
 CONN_MAX_AGE = 60 * 60 * 1  # 数据库连接持续时间，单位为秒，这里设置为1小时
 

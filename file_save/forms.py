@@ -29,3 +29,6 @@ class FolderForm(forms.ModelForm):
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '文件夹名称'})
         }
+
+class FileShareForm(forms.Form):
+    shared_target = forms.IntegerField(disabled=True)

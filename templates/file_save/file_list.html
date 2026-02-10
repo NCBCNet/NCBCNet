@@ -108,27 +108,58 @@
             <div class="col-md-4">
                 <div class="stats-card">
                     <h6 class="text-muted">文件夹数量</h6>
-                    <h3><i class="fas fa-folder text-warning"></i> {{ folders.count }}</h3>
+                    <h3><i class="fas fa-folder text-warning"></i> {{ folders_count }}</h3>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="stats-card">
                     <h6 class="text-muted">文件数量</h6>
-                    <h3><i class="fas fa-file text-primary"></i> {{ files.count }}</h3>
+                    <h3><i class="fas fa-file text-primary"></i> {{ files_count }}</h3>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="stats-card">
                     <h6 class="text-muted">总大小</h6>
-                    <h3><i class="fas fa-database text-success"></i> {{ files|length }} 项</h3>
+                    <h3><i class="fas fa-database text-success"></i> {{ files_length }} 项</h3>
                 </div>
             </div>
         </div>
 
         <hr>
-
+       {% if is_shared_files %}
+        <div class="grid-view">
+        <!-- 共享文件显示位置 -->
+        {% for file in shared_files %}
+            <div class="card file-card]">
+            <div class="card-body text-center">
+                <div class="file-icon">
+                    <i class="fas fa-file"></i>
+                </div>
+                <h6 class="mt-2 mb-1" title="{{ file.original_name }}">
+                    {{ file.original_name|truncatechars:20 }}
+                </h6>
+                <small class="text-muted d-block" style="color: blue">共享文件</small>
+                <small class="text-muted d-block">{{ file.get_file_size_display }}</small>
+                <small class="text-muted d-block">{{ file.uploaded_at|date:"Y-m-d H:i" }}</small>
+                <small class="text-muted d-block">{{ file.owner.username }}</small>
+                <div class="action-buttons mt-2 justify-content-center">
+                    <a href="{% url 'file_save:file_download' file.id %}" class="btn btn-sm btn-primary" title="下载">
+                        <i class="fas fa-download"></i>
+                    </a>
+                </div>
+            </div>
+            </div>
+        {% endfor %}
+        </div>
+        {% else %}
+           <div class="text-center py-5">
+                <i class="fas fa-folder-open" style="font-size: 4rem; color: #ccc;"></i>
+                <p class="mt-3 text-muted">暂无共享文件</p>
+            </div>
+        {% endif %}
+        <hr>
         <!-- 文件夹和文件网格视图 -->
-        {% if folders or files %}
+        {% if is_files %}
             <div class="grid-view">
                 <!-- 文件夹 -->
                 {% for folder in folders %}
@@ -163,14 +194,24 @@
                             <h6 class="mt-2 mb-1" title="{{ file.original_name }}">
                                 {{ file.original_name|truncatechars:20 }}
                             </h6>
+                            {% if file.share %}
+                                <small class="text-muted d-block" style="color: blue">共享文件</small>
+                            {% endif %}
                             <small class="text-muted d-block">{{ file.get_file_size_display }}</small>
                             <small class="text-muted d-block">{{ file.uploaded_at|date:"Y-m-d H:i" }}</small>
-                            <br>
                             <small class="text-muted d-block">{{ file.owner.username }}</small>
                             <div class="action-buttons mt-2 justify-content-center">
                                 <a href="{% url 'file_save:file_download' file.id %}" class="btn btn-sm btn-primary" title="下载">
                                     <i class="fas fa-download"></i>
                                 </a>
+                                <form action="." method="POST" id="shared_form" enctype="multipart/form-data">
+                                    <input type="hidden" name="shared_target" value="{{ file.id }}" for="shared_target">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-check" title="共享">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </form>
+
                                 <button class="btn btn-sm btn-danger" onclick="confirmFileDelete({{ file.id }})" title="删除">
                                     <i class="fas fa-trash"></i>
                                 </button>

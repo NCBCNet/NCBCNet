@@ -1,41 +1,79 @@
+from tokenize import group
+
 from django.shortcuts import render,redirect
-from django.contrib.auth import authenticate, login, logout
-from django.http import HttpResponse
+from django.contrib.auth import authenticate, login, logout,alogin
+from django.http import HttpResponse,JsonResponse
+from django.urls import reverse
+from asgiref.sync import sync_to_async
 from .forms import UserLoginForm,UserRegisterForm,ProfileForm
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from .models import Profile
+from django_ratelimit.decorators import ratelimit
+from django_ratelimit.core import is_ratelimited
+# from django.views.decorators.http import require_http_methods
 # Create your views here.
 
-def user_register(request):
+# @ratelimit(key='ip', rate='10/m', block=True)
+async def user_register(request):
     if request.method == 'POST':
         form = UserRegisterForm(data=request.POST)
-        if form.is_valid():
-            new_user = form.save(commit=False)
-            new_user.set_password(form.cleaned_data['password'])
-            new_user.save()
-            login(request, new_user)
-            return redirect('server:index')
+        is_valid = await sync_to_async(form.is_valid)()
+        JsonErr = {'success': False, 'errors':{}}
+        if is_valid:
+            if form.cleaned_data.get('password') == form.cleaned_data.get('password2'):
+                new_user = await sync_to_async(form.save)(commit=False)
+                await sync_to_async(new_user.set_password)(form.cleaned_data['password'])
+                await sync_to_async(new_user.save)()
+                await alogin(request, new_user)
+                return JsonResponse({
+                    'success': True,
+                    'redirect_url': reverse('server:index')
+                })
+            else:
+                JsonErr['errors']['password2'] = [{'message': '两次输入的密码不一致，请重新输入', 'code': 'password_mismatch'}]
+                return JsonResponse(JsonErr,status=400)
         else:
-            return HttpResponse("输入有误")
+            JsonErr['errors'] = form.errors.get_json_data()
+            return JsonResponse(JsonErr,status=400)
     elif request.method == 'GET':
         form = UserRegisterForm()
         context = {'form': form}
         return render(request,'usermanage/register.html',context)
     else:
         return HttpResponse("仅允许GET或POST")
-def user_login(request):
+
+# @ratelimit(key='ip', rate='10/m',method='POST', block=True)
+async def user_login(request):
     if request.method == 'POST':
+        was_limited = await sync_to_async(is_ratelimited)(
+            request,
+            key='ip',
+            rate='5/m',
+            method="POST",
+            increment=True,
+            group='user_login'
+        )
+        if was_limited:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': '请求过于频繁，请稍后再试'}, status=429)
+            return HttpResponse("请求过于频繁，请稍后再试", status=429)
         form = UserLoginForm(data=request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            user = authenticate(username=data['username'], password=data['password'])
+            user = await sync_to_async(authenticate)(username=data['username'], password=data['password'])
             if user:
-                login(request, user)
+                await alogin(request, user)
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True, 'redirect_url': reverse('server:index')})
                 return redirect('server:index')
             else:
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'message': '账号或密码有误，请重新输入'})
                 return HttpResponse("账号或密码有误")
         else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': '输入不合法'})
             return HttpResponse("输入不合法")
     elif request.method == 'GET':
         form = UserLoginForm()

@@ -5,23 +5,27 @@
         <div class="row">
             <div class="col-12 mt-5">
                 <h1>注册</h1>
-                <form method="POST" action=".">
+                <form method="POST" action="." id="register-form">
                     {% csrf_token %}
                     <div class="form-group col-md-4">
                         <label for="username">用户名</label>
                         <input type="text" class="form-control" id="username" name="username" required>
+                        <small id="error-username" class="text-danger"></small>
                     </div>
                     <div class="form-group col-md-4">
                         <label for="email">邮箱</label>
                         <input type="text" class="form-control" id="email" name="email">
+                        <small id="error-email" class="text-danger"></small>
                     </div>
                     <div class="form-group col-md-4">
                         <label for="password">密码</label>
                         <input type="password" class="form-control" id="password" name="password" required>
+                        <small id="error-password" class="text-danger"></small>
                     </div>
                     <div class="form-group col-md-4">
                         <label for="password2">重复密码</label>
                         <input type="password" class="form-control" id="password2" name="password2" required>
+                        <small id="error-password2" class="text-danger"></small>
                     </div>
                     <br>
                     <br>
@@ -30,4 +34,38 @@
             </div>
         </div>
     </div>
+{% endblock %}
+{% block script %}
+    <script>
+    document.getElementById('register-form').onsubmit = async function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.text-danger').forEach(el => el.innerText = "");
+
+        const formData = new FormData(this);
+        try {
+            const response = await fetch('.',{
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            const result = await response.json();
+
+            if(result.success) {
+                window.location.href = result.redirect_url;
+            } else {
+                for (let field in result.errors) {
+                    const errorElement = document.getElementById(`error-${field}`);
+                    if (errorElement) {
+                        errorElement.innerText = result.errors[field][0].message;
+                }
+            }
+        }
+    } catch (err){
+        alert("注册失败，请检查网络或稍后再试");
+    }
+    }
+    </script>
 {% endblock %}
