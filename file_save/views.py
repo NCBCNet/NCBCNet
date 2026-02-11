@@ -57,9 +57,8 @@ async def FileList(request):
         current_folder = None
         
         # Query shared files asynchronously and convert to list
-        def query_shared_files():
-            return list(UploadedFile.objects.filter(share=True).exclude(owner=request.user))
-        shared_files = await sync_to_async(query_shared_files)()
+        shared_files_queryset = UploadedFile.objects.filter(share=True).exclude(owner=user)
+        shared_files = await sync_to_async(list)(shared_files_queryset)
         
         if folder_id:
             try:
@@ -90,7 +89,7 @@ async def FileList(request):
             files_count = await files_queryset.acount()
             # Convert queryset to list for template iteration
             files = await sync_to_async(list)(files_queryset)
-        files_lenth = len(files)
+        files_length = len(files)
         # 获取面包屑导航
         breadcrumbs = []
         if current_folder:
@@ -113,7 +112,7 @@ async def FileList(request):
             'folders': folders,
             'folders_count': folders_count,
             'files_count': files_count,
-            'files_lenth': files_lenth,
+            'files_length': files_length,
             'current_folder': current_folder,
             'breadcrumbs': breadcrumbs,
             'file_form': file_form,
