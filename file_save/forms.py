@@ -31,4 +31,4 @@ class FolderForm(forms.ModelForm):
         }
 
 class FileShareForm(forms.Form):
-    shared_target = forms.IntegerField(disabled=True)
+    shared_target = forms.IntegerField(widget=forms.HiddenInput())

@@ -12,6 +12,20 @@ DATABASES = {
     }
 }
 
+# Use fakeredis for testing (compatible with django-ratelimit)
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://localhost:6379/0',
+        'OPTIONS': {
+            'REDIS_CLIENT_CLASS': 'fakeredis.FakeRedis',
+        }
+    }
+}
+
+# Use database-backed sessions for testing
+SESSION_ENGINE='django.contrib.sessions.backends.db'
+
 # Disable debug mode for tests
 DEBUG = False
 
@@ -41,3 +55,6 @@ class DisableMigrations:
         return None
 
 MIGRATION_MODULES = DisableMigrations()
+
+# Disable ratelimit for tests
+RATELIMIT_ENABLE = False
