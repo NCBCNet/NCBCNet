@@ -57,7 +57,9 @@ async def FileList(request):
         current_folder = None
         
         # Query shared files asynchronously
-        shared_files = UploadedFile.objects.filter(share=True).exclude(owner=user)
+        def query_shared_files():
+            return UploadedFile.objects.filter(share=True).exclude(owner=request.user)
+        shared_files = await sync_to_async(query_shared_files)()
         
         if folder_id:
             try:
