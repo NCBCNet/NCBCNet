@@ -11,4 +11,6 @@ EXPOSE 443
 EXPOSE 8000
 RUN head -c 50 /dev/urandom | base64 > .SECRET
 RUN python3 manage.py collectstatic
+RUN python3 manage.py makemigrations
+RUN python3 manage.py migrate
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

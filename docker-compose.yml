@@ -9,6 +9,8 @@ services:
       - .:/app           # 挂载 Django 项目到容器
     ports:
       - "8000:8000"      # 映射 Daphne 服务端口
+    environment:
+      - DJANGO_SETTINGS_MODULE=NCBCNet.settings
     depends_on:
       - db
 
@@ -21,16 +23,17 @@ services:
     depends_on:
       - web
     volumes:
+      - /www/server/certs:/www/server/certs  # 挂载 SSL 证书
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf  # 挂载自定义 Nginx 配置
 
   db:
     image: mysql:8.0
     container_name: mysql-db
     environment:
-      MYSQL_ROOT_PASSWORD: ;P7HRtH88Wn2tqCnwwES
-      MYSQL_DATABASE: ncnetdb
-      MYSQL_USER: ncnet
-      MYSQL_PASSWORD: Ncbcnet@2024
+      MYSQL_ROOT_PASSWORD: {{ DB_ROOT_PASSWORD }}
+      MYSQL_DATABASE: {{ SERVER_DB_NAME}}
+      MYSQL_USER: {{ DB_USER_NAME}}
+      MYSQL_PASSWORD: { {DB_USER_PASSWORD }}
     ports:
       - "3306:3306"      # 映射数据库服务端口
     volumes:
