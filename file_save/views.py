@@ -56,10 +56,9 @@ async def FileList(request):
         folder_id = request.GET.get('folder')
         current_folder = None
         
-        # Query shared files asynchronously
-        def query_shared_files():
-            return UploadedFile.objects.filter(share=True).exclude(owner=request.user)
-        shared_files = await sync_to_async(query_shared_files)()
+        # Query shared files asynchronously and convert to list
+        shared_files_queryset = UploadedFile.objects.filter(share=True).exclude(owner=user)
+        shared_files = await sync_to_async(list)(shared_files_queryset)
         
         if folder_id:
             try:
@@ -69,38 +68,51 @@ async def FileList(request):
 
         # 获取当前文件夹下的子文件夹
         if current_folder:
-            folders = Folder.objects.filter(parent=current_folder, owner=user)
-            folders_count = await folders.acount()
+            folders_queryset = Folder.objects.filter(parent=current_folder, owner=user)
+            folders_count = await folders_queryset.acount()
+            # Convert queryset to list for template iteration
+            folders = await sync_to_async(list)(folders_queryset)
         else:
-            folders = Folder.objects.filter(parent=None, owner=user)
-            folders_count = await folders.acount()
+            folders_queryset = Folder.objects.filter(parent=None, owner=user)
+            folders_count = await folders_queryset.acount()
+            # Convert queryset to list for template iteration
+            folders = await sync_to_async(list)(folders_queryset)
 
         # 获取当前文件夹下的文件
         if current_folder:
-            files = UploadedFile.objects.filter(folder=current_folder, owner=user)
-            files_count = await files.acount()
+            files_queryset = UploadedFile.objects.filter(folder=current_folder, owner=user)
+            files_count = await files_queryset.acount()
+            # Convert queryset to list for template iteration
+            files = await sync_to_async(list)(files_queryset)
         else:
-            files = UploadedFile.objects.filter(folder=None, owner=user)
-            files_count = await files.acount()
-        files_lenth = await sync_to_async(len)(files)
+            files_queryset = UploadedFile.objects.filter(folder=None, owner=user)
+            files_count = await files_queryset.acount()
+            # Convert queryset to list for template iteration
+            files = await sync_to_async(list)(files_queryset)
+        files_length = len(files)
         # 获取面包屑导航
         breadcrumbs = []
         if current_folder:
-            temp_folder = current_folder
-            while temp_folder:
-                breadcrumbs.insert(0, temp_folder)
-                temp_folder = temp_folder.parent
+            # Build breadcrumbs synchronously to avoid accessing parent FK in async context
+            def build_breadcrumbs(folder):
+                crumbs = []
+                temp = folder
+                while temp:
+                    crumbs.insert(0, temp)
+                    temp = temp.parent
+                return crumbs
+            breadcrumbs = await sync_to_async(build_breadcrumbs)(current_folder)
 
         file_form = UploadedFileForm(user=user)
         folder_form = FolderForm()
-        is_shared_files = await sync_to_async(shared_files.exists)()
-        is_files = await sync_to_async(files.exists)() or await sync_to_async(folders.exists)()
+        is_shared_files = len(shared_files) > 0
+        is_files = len(files) > 0 or len(folders) > 0
         context = {
             'files': files,
             'folders': folders,
             'folders_count': folders_count,
             'files_count': files_count,
-            'files_lenth': files_lenth,
+            'files_length': files_length,
             'current_folder': current_folder,
             'breadcrumbs': breadcrumbs,
             'file_form': file_form,
