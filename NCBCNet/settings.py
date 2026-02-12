@@ -29,6 +29,7 @@ with open(file_path, 'r') as f:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 DAPHNEON_IN_DEBUG = True
+SQL_DEBUG = False
 # 一定注意生产环境下将上面两个调为Flase！！！
 ALLOWED_HOSTS = ['*']
 
@@ -185,14 +186,7 @@ WSGI_APPLICATION = 'NCBCNet.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 # 生产环境使用MySQL数据库，开发环境使用SQLite数据库
 
-if DEBUG or DAPHNEON_IN_DEBUG:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
+if SQL_DEBUG:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -203,6 +197,25 @@ else:
             'PORT': "3306",
         }
     }
+else:
+    if DEBUG or DAPHNEON_IN_DEBUG :
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
+    else:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': "ncnetdb",
+                'USER': "ncnet",
+                'PASSWORD': "dbuserpassword",
+                'HOST': "127.0.0.1",
+                'PORT': "3306",
+            }
+        }
 # Redis 缓存配置
 CACHES = {
     "default": {
