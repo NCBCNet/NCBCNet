@@ -11,3 +11,4 @@ requirements_tmp.txt
 venv/
 *.sqlite3
 *.sqlite
+/env/

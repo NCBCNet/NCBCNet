@@ -76,8 +76,14 @@ async def user_login(request):
                 return JsonResponse({'success': False, 'message': '输入不合法'})
             return HttpResponse("输入不合法")
     elif request.method == 'GET':
+        def auth_status(user):
+            if user.is_authenticated:
+                return True
+            else:
+                return False
+        user_auth = await sync_to_async(auth_status)(request.user)
         form = UserLoginForm()
-        context = {'form': form}
+        context = {'form': form,'user_auth': user_auth}
         return render(request,'usermanage/login.html',context)
     else:
         return HttpResponse("不是GET或POST请求")

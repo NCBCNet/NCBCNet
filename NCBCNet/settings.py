@@ -27,8 +27,8 @@ with open(file_path, 'r') as f:
     SECRET_KEY = file_content
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-DAPHNEON_IN_DEBUG = True
+DEBUG = False
+DAPHNEON_IN_DEBUG = False
 SQL_DEBUG = False
 # 一定注意生产环境下将上面两个调为Flase！！！
 ALLOWED_HOSTS = ['*']
@@ -86,7 +86,7 @@ MIDDLEWARE = [
 
 if DEBUG:
     INSTALLED_APPS.append("sslserver")
-if DAPHNEON_IN_DEBUG or DEBUG:
+if DAPHNEON_IN_DEBUG:
     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
