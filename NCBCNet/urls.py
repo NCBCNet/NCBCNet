@@ -33,6 +33,7 @@ urlpatterns = [
     path('comment/', include('comment.urls', namespace='comment')),
     path(r'mdeditor/', include('mdeditor.urls')),
     path('file_up/',include('file_save.urls',namespace='file_save')),
+    path("ckeditor5/", include('django_ckeditor_5.urls')),
     # path('^inbox/notifications/', include(notifications.urls, namespace='notifications')),
 
 ]

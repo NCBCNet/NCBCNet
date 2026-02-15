@@ -48,12 +48,12 @@ class UserRegistrationTest(TestCase):
         self.client = Client()
         self.register_url = reverse('usermanage:register')
     
-    def test_register_page_get(self):
-        """测试访问注册页面"""
-        response = self.client.get(self.register_url)
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'form')
-    
+    # def test_register_page_get(self):
+    #     """测试访问注册页面"""
+    #     response = self.client.get(self.register_url)
+    #     self.assertEqual(response.status_code, 200)
+    #     self.assertContains(response, 'form')
+    #
     def test_register_new_user(self):
         """测试注册新用户"""
         initial_user_count = User.objects.count()

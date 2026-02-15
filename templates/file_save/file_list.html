@@ -3,65 +3,504 @@
 {% block title %}
     - 云上网盘
 {% endblock %}
+
+{% block head %}
+<style>
+    .file-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .file-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .folder-icon {
+        font-size: 3rem;
+        color: #ffc107;
+    }
+    .file-icon {
+        font-size: 3rem;
+        color: #007bff;
+    }
+    .breadcrumb-item a {
+        text-decoration: none;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .upload-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    .stats-card {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .grid-view {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    @media (max-width: 768px) {
+        .grid-view {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
     <div class="container mt-4">
     {% if user.is_authenticated %}
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h1 class="mb-0">云上网盘</h1>
-                <p class="mb-0 text-muted">欢迎使用南城巴川云上网盘服务！在这里，您可以上传、管理和分享您的文件。</p>
+        
+        <!-- 头部区域 -->
+        <div class="upload-section">
+            <h1 class="mb-3"><i class="fas fa-cloud"></i> 云上网盘</h1>
+            <p class="mb-4">欢迎使用南城巴川云上网盘服务！在这里，您可以上传、管理和分享您的文件。</p>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <form id="uploadForm" method="POST" enctype="multipart/form-data" action="{% url 'file_save:file_upload' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="folder" value="{{ current_folder.id|default:'' }}">
+                        <input type="hidden" name="current_folder" value="{{ current_folder.id|default:'' }}">
+                        <div class="input-group">
+                            <input class="form-control" type="file" id="file" name="file" required>
+                            <button type="submit" class="btn btn-light"><i class="fas fa-upload"></i> 上传文件</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <form method="POST" action="{% url 'file_save:folder_create' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="parent_folder" value="{{ current_folder.id|default:'' }}">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="name" placeholder="新建文件夹" required>
+                            <button type="submit" class="btn btn-light"><i class="fas fa-folder-plus"></i> 创建文件夹</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="mb-3">
-
-            </div>
-            <form class="d-flex align-items-center gap-2" method="POST" enctype="multipart/form-data" action=".">
-                {% csrf_token %}
-                <label for="file" class="form-label"></label>
-                <input class="form-control" type="file" id="file" name="file" required>
-                <button type="submit" class="btn btn-primary">上传</button>
-            </form>
         </div>
-        <hr>
-        <h3>文件列表</h3>
-        {% if files %}
-            <ul class="list-group">
-                {% for file in files %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <a href="{{ file.file.url }}" target="_blank">{{ file }}</a>
-                        <span class="badge bg-primary rounded-pill">{{ file.uploaded_at|date:"Y-m-d H:i" }}</span>
-                        <button class="btn btn-primary" type="button" onclick="confirm_delete({{ file.id }})">删除</button>
-                        <form id="safe_delete_file_{{ file.id }}" method="POST" action="{% url 'file_save:file_delete' file.id %}" style="display: none;">
-                            {% csrf_token %}
-                            <button type="submit">f</button>
-                        </form>
+
+        <!-- 面包屑导航 -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'file_save:file_list' %}"><i class="fas fa-home"></i> 根目录</a>
+                </li>
+                {% for folder in breadcrumbs %}
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'file_save:file_list' %}?folder={{ folder.id }}">{{ folder.name }}</a>
                     </li>
                 {% endfor %}
-            </ul>
+            </ol>
+        </nav>
+
+        <!-- 统计信息 -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h6 class="text-muted">文件夹数量</h6>
+                    <h3><i class="fas fa-folder text-warning"></i> {{ folders_count }}</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h6 class="text-muted">文件数量</h6>
+                    <h3><i class="fas fa-file text-primary"></i> {{ files_count }}</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h6 class="text-muted">总大小</h6>
+                    <h3><i class="fas fa-database text-success"></i> {{ files_length }} 项</h3>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+       {% if is_shared_files %}
+        <div class="grid-view">
+        <!-- 共享文件显示位置 -->
+        {% for file in shared_files %}
+            <div class="card file-card]">
+            <div class="card-body text-center">
+                <div class="file-icon">
+                    <i class="fas fa-file"></i>
+                </div>
+                <h6 class="mt-2 mb-1" title="{{ file.original_name }}">
+                    {{ file.original_name|truncatechars:20 }}
+                </h6>
+                <small class="text-muted d-block" style="color: blue">共享文件</small>
+                <small class="text-muted d-block">{{ file.get_file_size_display }}</small>
+                <small class="text-muted d-block">{{ file.uploaded_at|date:"Y-m-d H:i" }}</small>
+                <small class="text-muted d-block">{{ file.owner.username }}</small>
+                <div class="action-buttons mt-2 justify-content-center">
+                    <a href="{% url 'file_save:file_download' file.id %}" class="btn btn-sm btn-primary" title="下载">
+                        <i class="fas fa-download"></i>
+                    </a>
+                </div>
+            </div>
+            </div>
+        {% endfor %}
+        </div>
         {% else %}
-            <p>还没有上传任何文件。</p>
+           <div class="text-center py-5">
+                <i class="fas fa-folder-open" style="font-size: 4rem; color: #ccc;"></i>
+                <p class="mt-3 text-muted">暂无共享文件</p>
+            </div>
         {% endif %}
+        <hr>
+        <!-- 文件夹和文件网格视图 -->
+        {% if is_files %}
+            <div class="grid-view">
+                <!-- 文件夹 -->
+                {% for folder in folders %}
+                    <div class="card file-card">
+                        <div class="card-body text-center">
+                            <a href="{% url 'file_save:file_list' %}?folder={{ folder.id }}" style="text-decoration: none; color: inherit;">
+                                <div class="folder-icon">
+                                    <i class="fas fa-folder"></i>
+                                </div>
+                                <h6 class="mt-2 mb-1">{{ folder.name }}</h6>
+                                <small class="text-muted">{{ folder.created_at|date:"Y-m-d" }}</small>
+                            </a>
+                            <div class="action-buttons mt-2 justify-content-center">
+                                <button class="btn btn-sm btn-danger" onclick="confirmFolderDelete({{ folder.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <form id="safe_delete_folder_{{ folder.id }}" method="POST" action="{% url 'file_save:folder_delete' folder.id %}" style="display: none;">
+                        {% csrf_token %}
+                    </form>
+                {% endfor %}
+
+                <!-- 文件 -->
+                {% for file in files %}
+                    <div class="card file-card">
+                        <div class="card-body text-center">
+                            <div class="file-icon">
+                                <i class="fas fa-file"></i>
+                            </div>
+                            <h6 class="mt-2 mb-1" title="{{ file.original_name }}">
+                                {{ file.original_name|truncatechars:20 }}
+                            </h6>
+                            {% if file.share %}
+                                <small class="text-muted d-block" style="color: blue">共享文件</small>
+                            {% endif %}
+                            <small class="text-muted d-block">{{ file.get_file_size_display }}</small>
+                            <small class="text-muted d-block">{{ file.uploaded_at|date:"Y-m-d H:i" }}</small>
+                            <div class="action-buttons mt-2 justify-content-center">
+                                <a href="{% url 'file_save:file_download' file.id %}" class="btn btn-sm btn-primary" title="下载">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <form action="." method="POST" id="shared_form" enctype="multipart/form-data">
+                                    <input type="hidden" name="shared_target" value="{{ file.id }}" for="shared_target">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-primary" title="共享">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </form>
+                                <button class="btn btn-sm btn-danger" onclick="confirmFileDelete({{ file.id }})" title="删除">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <form id="safe_delete_file_{{ file.id }}" method="POST" action="{% url 'file_save:file_delete' file.id %}" style="display: none;">
+                        {% csrf_token %}
+                    </form>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-folder-open" style="font-size: 4rem; color: #ccc;"></i>
+                <p class="mt-3 text-muted">此文件夹为空</p>
+            </div>
+        {% endif %}
+
     {% else %}
-        <p>请先登录以访问您的云上网盘。</p>
+        <div class="text-center py-5">
+            <i class="fas fa-lock" style="font-size: 4rem; color: #ccc;"></i>
+            <p class="mt-3">请先登录以访问您的云上网盘。</p>
+            <a href="{% url 'usermanage:login' %}" class="btn btn-primary">立即登录</a>
+        </div>
     {% endif %}
     </div>
+
+    <!-- 上传进度条模态框 -->
+    <div class="modal fade" id="uploadProgressModal" tabindex="-1" aria-labelledby="uploadProgressModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="uploadProgressModalLabel">
+                        <i class="fas fa-cloud-upload-alt"></i> 上传进度
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <p class="mb-1"><strong>用户：</strong> <span id="uploadUser">{{ user.username }}</span></p>
+                        <p class="mb-1"><strong>文件名：</strong> <span id="uploadFileName">-</span></p>
+                        <p class="mb-1"><strong>文件大小：</strong> <span id="uploadFileSize">-</span></p>
+                        <p class="mb-1"><strong>上传进度：</strong> <span id="uploadPercent">0%</span></p>
+                    </div>
+                    <div class="progress" style="height: 30px;">
+                        <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             style="width: 0%;" 
+                             aria-valuenow="0" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            0%
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <p class="text-muted small mb-1" id="uploadSpeed">上传速度: 计算中...</p>
+                        <p class="text-muted small mb-0" id="uploadTimeRemaining">剩余时间: 计算中...</p>
+                    </div>
+                    <div id="uploadSuccess" class="alert alert-success mt-3" style="display: none;">
+                        <i class="fas fa-check-circle"></i> 文件上传成功！
+                    </div>
+                    <div id="uploadError" class="alert alert-danger mt-3" style="display: none;">
+                        <i class="fas fa-exclamation-circle"></i> <span id="uploadErrorMsg">上传失败</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="cancelUploadBtn" class="btn btn-secondary">取消上传</button>
+                    <button type="button" id="closeUploadBtn" class="btn btn-primary" style="display: none;">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
+
 {% block script %}
     <script>
-    function confirm_delete(id) {
-            // 调用layer弹窗组件
-            layer.open({
-                // 弹窗标题
-                title: "确认删除",
-                // 正文
-                content: "确认删除这个文件吗？",
-                // 点击确定按钮后调用的回调函数
-                yes: function (index, layero) {
-                    const form = document.getElementById(`safe_delete_file_${id}`);
-                    form.submit();
-                    layer.close(index);
-                },
-            })
+    let uploadXHR = null;
+    let startTime = null;
+    
+    // Constants
+    const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024; // 100MB
+    const AUTO_RELOAD_DELAY = 3000; // 3 seconds
+    
+    function confirmFileDelete(id) {
+        layer.open({
+            title: "确认删除",
+            content: "确认删除这个文件吗？此操作不可撤销。",
+            yes: function (index, layero) {
+                const form = document.getElementById(`safe_delete_file_${id}`);
+                form.submit();
+                layer.close(index);
+            },
+        })
+    }
+    
+    function confirmFolderDelete(id) {
+        layer.open({
+            title: "确认删除",
+            content: "确认删除这个文件夹吗？文件夹内的所有文件和子文件夹也会被删除，此操作不可撤销。",
+            yes: function (index, layero) {
+                const form = document.getElementById(`safe_delete_folder_${id}`);
+                form.submit();
+                layer.close(index);
+            },
+        })
+    }
+
+    // 格式化文件大小
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
+    }
+
+    // 格式化时间
+    function formatTime(seconds) {
+        if (!isFinite(seconds) || seconds < 0) return '计算中...';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        if (h > 0) return `${h}小时${m}分${s}秒`;
+        if (m > 0) return `${m}分${s}秒`;
+        return `${s}秒`;
+    }
+
+    // AJAX文件上传处理
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('file');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            layer.msg('请选择要上传的文件');
+            return;
         }
+
+        // 显示进度模态框
+        const uploadModal = new bootstrap.Modal(document.getElementById('uploadProgressModal'));
+        uploadModal.show();
+        
+        // 重置进度条和消息
+        document.getElementById('uploadProgressBar').style.width = '0%';
+        document.getElementById('uploadProgressBar').textContent = '0%';
+        document.getElementById('uploadProgressBar').setAttribute('aria-valuenow', 0);
+        document.getElementById('uploadPercent').textContent = '0%';
+        document.getElementById('uploadFileName').textContent = file.name;
+        document.getElementById('uploadFileSize').textContent = formatFileSize(file.size);
+        document.getElementById('uploadSuccess').style.display = 'none';
+        document.getElementById('uploadError').style.display = 'none';
+        document.getElementById('cancelUploadBtn').style.display = 'inline-block';
+        document.getElementById('closeUploadBtn').style.display = 'none';
+        
+        // 创建FormData
+        const formData = new FormData(this);
+        
+        // 创建XMLHttpRequest
+        uploadXHR = new XMLHttpRequest();
+        startTime = Date.now();
+        
+        // 上传进度事件
+        uploadXHR.upload.addEventListener('progress', function(e) {
+            if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                
+                // 更新进度条
+                document.getElementById('uploadProgressBar').style.width = percentComplete + '%';
+                document.getElementById('uploadProgressBar').textContent = percentComplete + '%';
+                document.getElementById('uploadProgressBar').setAttribute('aria-valuenow', percentComplete);
+                document.getElementById('uploadPercent').textContent = percentComplete + '%';
+                
+                // 计算上传速度
+                const elapsedTime = (Date.now() - startTime) / 1000; // 秒
+                const uploadSpeed = e.loaded / elapsedTime; // 字节/秒
+                document.getElementById('uploadSpeed').textContent = 
+                    '上传速度: ' + formatFileSize(uploadSpeed) + '/s';
+                
+                // 计算剩余时间
+                const remainingBytes = e.total - e.loaded;
+                const remainingTime = remainingBytes / uploadSpeed;
+                document.getElementById('uploadTimeRemaining').textContent = 
+                    '剩余时间: ' + formatTime(remainingTime);
+                
+                // 改变进度条颜色
+                const progressBar = document.getElementById('uploadProgressBar');
+                if (percentComplete < 50) {
+                    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-info';
+                } else if (percentComplete < 100) {
+                    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-warning';
+                } else {
+                    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-success';
+                }
+            }
+        });
+        
+        // 上传完成事件
+        uploadXHR.addEventListener('load', function() {
+            if (uploadXHR.status === 200) {
+                // 解析 JSON 响应
+                try {
+                    const response = JSON.parse(uploadXHR.responseText);
+                    if (response.success) {
+                        // 上传成功
+                        document.getElementById('uploadSuccess').style.display = 'block';
+                        document.getElementById('uploadProgressBar').className = 'progress-bar bg-success';
+                        document.getElementById('cancelUploadBtn').style.display = 'none';
+                        document.getElementById('closeUploadBtn').style.display = 'inline-block';
+                        
+                        // 3秒后跳转到指定页面
+                        setTimeout(function() {
+                            window.location.href = response.redirect_url;
+                        }, AUTO_RELOAD_DELAY);
+                    } else {
+                        // 上传失败
+                        document.getElementById('uploadError').style.display = 'block';
+                        document.getElementById('uploadErrorMsg').textContent = 
+                            response.message || '上传失败';
+                        document.getElementById('uploadProgressBar').className = 'progress-bar bg-danger';
+                        document.getElementById('cancelUploadBtn').style.display = 'none';
+                        document.getElementById('closeUploadBtn').style.display = 'inline-block';
+                    }
+                } catch (e) {
+                    // JSON 解析失败
+                    document.getElementById('uploadError').style.display = 'block';
+                    document.getElementById('uploadErrorMsg').textContent = '响应解析失败';
+                    document.getElementById('uploadProgressBar').className = 'progress-bar bg-danger';
+                    document.getElementById('cancelUploadBtn').style.display = 'none';
+                    document.getElementById('closeUploadBtn').style.display = 'inline-block';
+                }
+            } else {
+                // HTTP 错误
+                document.getElementById('uploadError').style.display = 'block';
+                document.getElementById('uploadErrorMsg').textContent = 
+                    '上传失败 (错误代码: ' + uploadXHR.status + ')';
+                document.getElementById('uploadProgressBar').className = 'progress-bar bg-danger';
+                document.getElementById('cancelUploadBtn').style.display = 'none';
+                document.getElementById('closeUploadBtn').style.display = 'inline-block';
+            }
+        });
+        
+        // 上传错误事件
+        uploadXHR.addEventListener('error', function() {
+            document.getElementById('uploadError').style.display = 'block';
+            document.getElementById('uploadErrorMsg').textContent = '网络错误，上传失败';
+            document.getElementById('uploadProgressBar').className = 'progress-bar bg-danger';
+            document.getElementById('cancelUploadBtn').style.display = 'none';
+            document.getElementById('closeUploadBtn').style.display = 'inline-block';
+        });
+        
+        // 上传中止事件
+        uploadXHR.addEventListener('abort', function() {
+            document.getElementById('uploadError').style.display = 'block';
+            document.getElementById('uploadErrorMsg').textContent = '上传已取消';
+            document.getElementById('uploadProgressBar').className = 'progress-bar bg-warning';
+            document.getElementById('cancelUploadBtn').style.display = 'none';
+            document.getElementById('closeUploadBtn').style.display = 'inline-block';
+        });
+        
+        // 发送请求
+        uploadXHR.open('POST', this.action);
+        uploadXHR.send(formData);
+    });
+
+    // 取消上传按钮
+    document.getElementById('cancelUploadBtn').addEventListener('click', function() {
+        if (uploadXHR) {
+            uploadXHR.abort();
+        }
+    });
+
+    // 关闭按钮
+    document.getElementById('closeUploadBtn').addEventListener('click', function() {
+        const uploadModal = bootstrap.Modal.getInstance(document.getElementById('uploadProgressModal'));
+        uploadModal.hide();
+        
+        // 如果上传成功，刷新页面
+        if (document.getElementById('uploadSuccess').style.display === 'block') {
+            window.location.reload();
+        }
+    });
+
+    // 文件选择提示
+    document.querySelector('input[type="file"]').addEventListener('change', function() {
+        if (this.files[0]) {
+            const fileSize = this.files[0].size;
+            const fileName = this.files[0].name;
+            if (fileSize > LARGE_FILE_THRESHOLD) {
+                layer.msg('已选择大文件: ' + fileName + ' (' + formatFileSize(fileSize) + ')', {time: 2000});
+            }
+        }
+    });
     </script>
 {% endblock %}

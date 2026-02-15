@@ -25,11 +25,20 @@
         <!-- csrf token -->
         <script src="{% static 'csrf.js' %}"></script>
         <script>
-            $(function (){
-                $(".django-ckeditor-widget").removeAttr('style');
-            });
             function confirm_submit(article_id, comment_id){
-                let content = CKEDITOR.instances['id_content'].getData();
+                // CKEditor 5 automatically syncs content back to the textarea
+                // So we can just get the textarea value
+                const textarea = document.querySelector('[name="content"]');
+                let content = '';
+                
+                // Try to get CKEditor 5 instance data first
+                if (textarea && textarea.ckeditorInstance) {
+                    content = textarea.ckeditorInstance.getData();
+                } else if (textarea) {
+                    // Fallback to textarea value (which should be synced by CKEditor 5)
+                    content = textarea.value;
+                }
+                
                 $.ajax({
                     url: '/comment/post-comment/' + article_id + '/' + comment_id + '/',
                     type: "POST",

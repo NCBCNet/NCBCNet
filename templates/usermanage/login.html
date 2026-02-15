@@ -5,12 +5,13 @@
         <div class="row">
             <div class="col-5 mt-5">
                 <h1>登录</h1>
-                <form method="POST" action=".">
+                <form method="POST" action="." id="login-form">
                     {% csrf_token %}
                     <div class="form-group">
                         <label for="username">账号</label>
                         <input type="text" class="form-control" id="username" name="username" placeholder="输入用户名">
                     </div>
+                    <div id="login-error" class="alert alert-danger mt-2" style="display: none;"></div>
                     <small class="form-text text-muted m-lg-1">
                         还没有账号？
                         <a href="{% url 'usermanage:register' %}" style="color: cornflowerblue;">注册</a>
@@ -29,4 +30,40 @@
             </div>
         </div>
     </div>
+{% endblock %}
+{% block script %}
+    <script>
+    document.getElementById('login-form').onsubmit = async function(e) {
+        e.preventDefault(); // 阻止页面刷新
+
+        const formData = new FormData(this);
+        const errorDiv = document.getElementById('login-error');
+
+        try {
+            const response = await fetch('.', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest', // 标识这是一个 AJAX 请求
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // 登录成功，跳转
+                window.location.href = result.redirect_url;
+            } else {
+                // 登录失败，显示错误而不刷新
+                errorDiv.innerText = result.message;
+                errorDiv.style.display = 'block';
+                // 顺便清空密码框
+                document.getElementById('password').value = '';
+            }
+        } catch (err) {
+            console.error('Login error:', err);
+        }
+    };
+    </script>
 {% endblock %}

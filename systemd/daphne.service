@@ -1,0 +1,14 @@
+[Unit]
+Description=Daphne NCNet
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/www/server/NCBCNet
+ExecStart=/www/server/NCBCNet/env/bin/daphne -e ssl:8000:privateKey=/etc/letsencrypt/live/ncnetstudent.top/privkey.pem:certKey=/etc/letsencrypt/live/ncnetstudent.top/fullchain.pem NCBCNet.asgi:application
+
+Restart=always
+RestartSec=3
+SyslogIdentifier=daphne-ncnet
+[Install]
+WantedBy=multi-user.target

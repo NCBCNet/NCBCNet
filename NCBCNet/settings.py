@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
-
+from datetime import datetime
 from daphne.apps import DaphneConfig
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -27,10 +27,11 @@ with open(file_path, 'r') as f:
     SECRET_KEY = file_content
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-DAPHNEON_IN_DEBUG = False
+DEBUG = True
+DAPHNEON_IN_DEBUG = True
+SQL_DEBUG = False
 # 一定注意生产环境下将上面两个调为Flase！！！
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'ncnetstudent.top', '.ncnetstudent.top']
+ALLOWED_HOSTS = ['*']
 
 # Security Settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -66,9 +67,10 @@ INSTALLED_APPS = [
     'comment',
     'taggit',
     'mptt',
-    'ckeditor',
+    'django_ckeditor_5',
     # 'notifications',
     'mdeditor',
+    'django_ratelimit'
 ]
 
 MIDDLEWARE = [
@@ -79,6 +81,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.csp.ContentSecurityPolicyMiddleware'
 ]
 
 if DEBUG:
@@ -106,33 +109,71 @@ TEMPLATES = [
     },
 ]
 
-CKEDITOR_CONFIGS = { # 富文本编辑器有TM安全问题
-    # django-ckeditor默认使用default配置
+customColorPalette = [
+    {'color': 'hsl(4, 90%, 58%)', 'label': 'Red'},
+    {'color': 'hsl(340, 82%, 52%)', 'label': 'Pink'},
+    {'color': 'hsl(291, 64%, 42%)', 'label': 'Purple'},
+    {'color': 'hsl(262, 52%, 47%)', 'label': 'Deep Purple'},
+    {'color': 'hsl(231, 48%, 48%)', 'label': 'Indigo'},
+    {'color': 'hsl(207, 90%, 54%)', 'label': 'Blue'},
+]
+
+CKEDITOR_5_CONFIGS = {
     'default': {
-        # 编辑器宽度自适应
-        'width':'auto',
-        'height':'250px',
-        # tab键转换空格数
-        'tabSpaces': 4,
-        # 工具栏风格
-        'toolbar': 'Custom',
-        # 工具栏按钮
-        'toolbar_Custom': [
-            # 表情 代码块
-            ['Smiley', 'CodeSnippet'],
-            # 字体风格
-            ['Bold', 'Italic', 'Underline', 'RemoveFormat', 'Blockquote'],
-            # 字体颜色
-            ['TextColor', 'BGColor'],
-            # 链接
-            ['Link', 'Unlink'],
-            # 列表
-            ['NumberedList', 'BulletedList'],
-            # 最大化
-            ['Maximize']
+        'toolbar': ['heading', '|', 'bold', 'italic', 'link',
+                    'bulletedList', 'numberedList', 'blockQuote', 'imageUpload'],
+    },
+    'extends': {
+        'blockToolbar': [
+            'paragraph', 'heading1', 'heading2', 'heading3',
+            '|',
+            'bulletedList', 'numberedList',
+            '|',
+            'blockQuote',
         ],
-        # 加入代码块插件
-        'extraPlugins': ','.join(['codesnippet', 'prism', 'widget', 'lineutils']),
+        'toolbar': ['heading', '|', 'outdent', 'indent', '|', 'bold', 'italic', 'link', 'underline', 'strikethrough',
+        'code','subscript', 'superscript', 'highlight', '|', 'codeBlock', 'sourceEditing', 'insertImage',
+                    'bulletedList', 'numberedList', 'todoList', '|',  'blockQuote', 'imageUpload', '|',
+                    'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', 'mediaEmbed', 'removeFormat',
+                    'insertTable'],
+        'image': {
+            'toolbar': ['imageTextAlternative', '|', 'imageStyle:alignLeft',
+                        'imageStyle:alignRight', 'imageStyle:alignCenter', 'imageStyle:side',  '|'],
+            'styles': [
+                'full',
+                'side',
+                'alignLeft',
+                'alignRight',
+                'alignCenter',
+            ]
+        },
+        'table': {
+            'contentToolbar': [ 'tableColumn', 'tableRow', 'mergeTableCells',
+            'tableProperties', 'tableCellProperties' ],
+            'tableProperties': {
+                'borderColors': customColorPalette,
+                'backgroundColors': customColorPalette
+            },
+            'tableCellProperties': {
+                'borderColors': customColorPalette,
+                'backgroundColors': customColorPalette
+            }
+        },
+        'heading' : {
+            'options': [
+                { 'model': 'paragraph', 'title': 'Paragraph', 'class': 'ck-heading_paragraph' },
+                { 'model': 'heading1', 'view': 'h1', 'title': 'Heading 1', 'class': 'ck-heading_heading1' },
+                { 'model': 'heading2', 'view': 'h2', 'title': 'Heading 2', 'class': 'ck-heading_heading2' },
+                { 'model': 'heading3', 'view': 'h3', 'title': 'Heading 3', 'class': 'ck-heading_heading3' }
+            ]
+        },
+        'list': {
+            'properties': {
+                'styles': True,
+                'startIndex': True,
+                'reversed': True
+            }
+        }
     }
 }
 
@@ -145,24 +186,50 @@ WSGI_APPLICATION = 'NCBCNet.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 # 生产环境使用MySQL数据库，开发环境使用SQLite数据库
 
-if DEBUG or DAPHNEON_IN_DEBUG:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
+if SQL_DEBUG:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': "ncbcnetdb",
-            'USER': "ncbcnetserver",
-            'PASSWORD': "Ncbcnet@2024",
+            'NAME': "ncnetdb",
+            'USER': "ncnet",
+            'PASSWORD': "dbuserpassword",
             'HOST': "127.0.0.1",
             'PORT': "3306",
         }
     }
+else:
+    if DEBUG or DAPHNEON_IN_DEBUG :
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
+    else:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': "ncnetdb",
+                'USER': "ncnet",
+                'PASSWORD': "dbuserpassword",
+                'HOST': "127.0.0.1",
+                'PORT': "3306",
+            }
+        }
+# Redis 缓存配置
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1", # /1 表示使用 Redis 的 1 号数据库
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # 如果 Redis 设置了密码，取消下面这行的注释
+            # "PASSWORD": "你的密码",
+        }
+    }
+}
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
 
 CONN_MAX_AGE = 60 * 60 * 1  # 数据库连接持续时间，单位为秒，这里设置为1小时
 
@@ -183,6 +250,11 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+desktop_log_dir = "logs"
+os.makedirs(desktop_log_dir, exist_ok=True)
+logfile_name = f"debug_{datetime.now().strftime('%Y.%m.%d')}.log"
+logfile_path = os.path.join(desktop_log_dir, logfile_name)
 
 LOGGING = {
     'version': 1,
@@ -211,11 +283,8 @@ LOGGING = {
         },
         'file': {
             'level': 'INFO',
-            # 'class': 'logging.FileHandler',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'when': 'midnight',
-            'backupCount': 30,
-            'filename': os.path.join(BASE_DIR, 'logs/debug.log'),
+            'class': 'logging.FileHandler',
+            'filename': logfile_path,
             'formatter': 'verbose',
         },
     },

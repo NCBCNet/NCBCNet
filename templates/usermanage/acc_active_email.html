@@ -1,0 +1,9 @@
+{% autoescape off %}
+你好 {{ user.username }},
+
+请点击下面的链接激活你的账户:
+
+http://{{ domain }}{% url 'usermanage:activate' uidb64=uid token=token %}
+
+(该链接点击一次后即失效)
+{% endautoescape %}

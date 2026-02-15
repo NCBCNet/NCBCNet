@@ -16,7 +16,7 @@ python.exe manage.py runserver localhost:8080
 ```
 
 ## 鸣谢
-感谢**大江狗的博客**在必要时提供的阅读帮助
+感谢**大江狗的博客**在开始时提供的知识与教学，完成早期相当一部分代码，甚至大部分都是从那~抄来的~写来的，没有他的话，如今项目不能是这个样子。
 
 还有**StackLens**的django blog教程，这里是的仓库链接[django-blog-tutorial](https://github.com/stacklens/django_blog_tutorial)
 
