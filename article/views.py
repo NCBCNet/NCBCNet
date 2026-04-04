@@ -163,6 +163,8 @@ def article_list_api(request):
         )
     if order == 'total_views':
         articles_qs = articles_qs.order_by('-total_views')
+    else:
+        articles_qs = articles_qs.order_by('-created')
 
     paginator = Paginator(articles_qs, page_size)
     page_obj = paginator.get_page(page)

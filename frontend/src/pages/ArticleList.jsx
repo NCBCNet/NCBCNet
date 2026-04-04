@@ -40,8 +40,9 @@ function ArticleList() {
   }
 
   const handleOrderChange = (val) => {
-    setOrder(val)
-    fetchArticles(1, search, val)
+    const orderVal = val ?? ''
+    setOrder(orderVal)
+    fetchArticles(1, search, orderVal)
   }
 
   return (
@@ -63,13 +64,12 @@ function ArticleList() {
           style={{ width: 240 }}
         />
         <Select
-          value={order || undefined}
-          placeholder="排序方式"
+          value={order === '' ? undefined : order}
+          placeholder="最新发布"
           allowClear
           style={{ width: 140 }}
           onChange={handleOrderChange}
           options={[
-            { value: '', label: '最新发布' },
             { value: 'total_views', label: '最多浏览' },
           ]}
         />
