@@ -1,71 +1,76 @@
 import { useState } from 'react'
-import axios from 'axios'
-import { useNavigate } from 'react-router-dom'
+import { Form, Input, Button, Card, Typography, Alert, Space } from 'antd'
+import { UserOutlined, LockOutlined } from '@ant-design/icons'
+import { useNavigate, Link } from 'react-router-dom'
+import request from '../utils/request'
 
-function Login() {
+const { Title, Text } = Typography
+
+function Login({ setUser }) {
   const navigate = useNavigate()
-  const [formData, setFormData] = useState({
-    username: '',
-    password: ''
-  })
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const onFinish = async (values) => {
+    setError(null)
+    setLoading(true)
     try {
-      const response = await axios.post('http://localhost:8000/usermanage/login/', formData)
-      setSuccess('Login successful!')
-      localStorage.setItem('token', response.data.token)
-      setTimeout(() => {
+      const res = await request.post('/usermanage/login/', values)
+      if (res.data.success) {
+        if (setUser) {
+          const userRes = await request.get('/usermanage/api/user/')
+          if (userRes.data.authenticated) setUser(userRes.data)
+        }
         navigate('/')
-      }, 1500)
+      } else {
+        setError(res.data.message || '登录失败，请检查用户名和密码')
+      }
     } catch (err) {
-      setError('Failed to login. Please check your credentials.')
-      console.error(err)
+      setError(err.response?.data?.message || '登录失败，请稍后重试')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="container">
-      <h1>Login</h1>
-      {success && <div className="alert alert-success">{success}</div>}
-      {error && <div className="alert alert-danger">{error}</div>}
-      <form onSubmit={handleSubmit} className="card">
-        <div className="form-group">
-          <label htmlFor="username">Username</label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            className="form-control"
-            value={formData.username}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            className="form-control"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <button type="submit" className="btn">Login</button>
-      </form>
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+      <Card style={{ width: '100%', maxWidth: 420 }}>
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <div style={{ textAlign: 'center' }}>
+            <Title level={2} style={{ marginBottom: 4 }}>登录</Title>
+            <Text type="secondary">欢迎回到 NCBCNet</Text>
+          </div>
+
+          {error && <Alert message={error} type="error" showIcon closable onClose={() => setError(null)} />}
+
+          <Form onFinish={onFinish} layout="vertical" size="large">
+            <Form.Item
+              name="username"
+              rules={[{ required: true, message: '请输入用户名' }]}
+            >
+              <Input prefix={<UserOutlined />} placeholder="用户名" />
+            </Form.Item>
+
+            <Form.Item
+              name="password"
+              rules={[{ required: true, message: '请输入密码' }]}
+            >
+              <Input.Password prefix={<LockOutlined />} placeholder="密码" />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={loading} block>
+                登录
+              </Button>
+            </Form.Item>
+          </Form>
+
+          <div style={{ textAlign: 'center' }}>
+            <Text type="secondary">还没有账号？ </Text>
+            <Link to="/usermanage/register">立即注册</Link>
+          </div>
+        </Space>
+      </Card>
     </div>
   )
 }

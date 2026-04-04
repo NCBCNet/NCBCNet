@@ -10,4 +10,7 @@ urlpatterns = [
     path('file_download/<int:id>/', views.FileDownload, name='file_download'),
     path('folder_create/', views.FolderCreate, name='folder_create'),
     path('folder_delete/<int:id>/', views.FolderDelete, name='folder_delete'),
+    # JSON API endpoints for React frontend
+    path('api/list/', views.file_list_api, name='api_list'),
+    path('api/delete/<int:id>/', views.file_delete_api, name='api_delete'),
 ]

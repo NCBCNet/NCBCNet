@@ -322,3 +322,45 @@ async def FileDownload(request, id):
 #         return redirect('file_save:file_list')
 #     except UploadedFile.DoesNotExist:
 #         raise Http404("文件不存在")
+
+# ========== JSON API Views for React Frontend ==========
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+
+@api_view(['GET'])
+def file_list_api(request):
+    if not request.user.is_authenticated:
+        return Response({'error': '请先登录'}, status=401)
+
+    files = UploadedFile.objects.filter(owner=request.user).select_related('folder')
+    data = [
+        {
+            'id': f.id,
+            'original_name': f.original_name,
+            'file_size': f.file_size,
+            'file_size_display': f.get_file_size_display(),
+            'uploaded_at': f.uploaded_at.isoformat(),
+            'share': f.share,
+            'folder': f.folder.name if f.folder else None,
+        }
+        for f in files
+    ]
+    return Response(data)
+
+
+@api_view(['DELETE', 'POST'])
+def file_delete_api(request, id):
+    if not request.user.is_authenticated:
+        return Response({'error': '请先登录'}, status=401)
+    try:
+        file_instance = UploadedFile.objects.get(id=id, owner=request.user)
+        if file_instance.file:
+            try:
+                file_instance.file.delete(save=False)
+            except Exception:
+                pass
+        file_instance.delete()
+        return Response({'success': True})
+    except UploadedFile.DoesNotExist:
+        return Response({'error': '文件不存在'}, status=404)

@@ -36,11 +36,15 @@ ALLOWED_HOSTS = ['*']
 # Security Settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-CSRF_COOKIE_SECURE = True
-
-SESSION_COOKIE_SECURE = True
-
-SECURE_SSL_REDIRECT = True
+if DEBUG:
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = False
+    SECURE_SSL_REDIRECT = False
+    CSRF_TRUSTED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173']
+else:
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
 
 # HTTP Strict Transport Security (HSTS)
 # Start with a low value in production and increase once verified.

@@ -5,10 +5,22 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': {
+      '/article': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
-      }
+      },
+      '/usermanage': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/file_up': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/server': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
     }
   }
 });

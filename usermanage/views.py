@@ -134,3 +134,26 @@ def edit_profile(request,id):
         return render(request,'usermanage/profile.html',context)
     else:
         return HttpResponse("请使用GET或POST请求数据")
+
+# ========== JSON API Views for React Frontend ==========
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+
+@api_view(['GET'])
+def user_info_api(request):
+    if not request.user.is_authenticated:
+        return Response({'authenticated': False})
+    return Response({
+        'authenticated': True,
+        'id': request.user.id,
+        'username': request.user.username,
+        'email': request.user.email,
+    })
+
+
+@api_view(['POST'])
+def user_logout_api(request):
+    from django.contrib.auth import logout
+    logout(request)
+    return Response({'success': True})

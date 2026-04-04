@@ -1,70 +1,86 @@
 import { useState } from 'react'
-import axios from 'axios'
+import { Form, Input, Button, Card, Typography, Alert, Space } from 'antd'
+import { ArrowLeftOutlined, SendOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import request from '../utils/request'
+
+const { Title, Text } = Typography
+const { TextArea } = Input
 
 function ArticleCreate() {
   const navigate = useNavigate()
-  const [formData, setFormData] = useState({
-    title: '',
-    content: ''
-  })
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const onFinish = async (values) => {
+    setError(null)
+    setLoading(true)
     try {
-      await axios.post('http://localhost:8000/article/article_create/', formData)
-      setSuccess('Article created successfully!')
-      setTimeout(() => {
-        navigate('/article')
-      }, 1500)
+      const res = await request.post('/article/api/create/', values)
+      if (res.data.success) {
+        navigate(`/article/article_detail/${res.data.id}`)
+      }
     } catch (err) {
-      setError('Failed to create article')
-      console.error(err)
+      if (err.response?.status === 401) {
+        setError('请先登录后再发布文章')
+      } else {
+        setError(err.response?.data?.error || '发布失败，请稍后重试')
+      }
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="container">
-      <h1>Create New Article</h1>
-      {success && <div className="alert alert-success">{success}</div>}
-      {error && <div className="alert alert-danger">{error}</div>}
-      <form onSubmit={handleSubmit} className="card">
-        <div className="form-group">
-          <label htmlFor="title">Title</label>
-          <input
-            type="text"
-            id="title"
+    <div style={{ maxWidth: 860, margin: '0 auto' }}>
+      <Space style={{ marginBottom: 16 }}>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/article')}>返回</Button>
+      </Space>
+
+      <Card>
+        <Title level={2} style={{ marginBottom: 24 }}>发布文章</Title>
+
+        {error && (
+          <Alert
+            message={error}
+            type="error"
+            showIcon
+            closable
+            style={{ marginBottom: 16 }}
+            onClose={() => setError(null)}
+          />
+        )}
+
+        <Form onFinish={onFinish} layout="vertical" size="large">
+          <Form.Item
             name="title"
-            className="form-control"
-            value={formData.title}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="content">Content</label>
-          <textarea
-            id="content"
+            label="标题"
+            rules={[
+              { required: true, message: '请输入文章标题' },
+              { max: 100, message: '标题不能超过 100 个字符' },
+            ]}
+          >
+            <Input placeholder="请输入文章标题" />
+          </Form.Item>
+
+          <Form.Item
             name="content"
-            className="form-control"
-            rows={10}
-            value={formData.content}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <button type="submit" className="btn">Create Article</button>
-      </form>
+            label="正文（支持 Markdown）"
+            rules={[{ required: true, message: '请输入文章内容' }]}
+          >
+            <TextArea rows={16} placeholder="请输入文章内容，支持 Markdown 格式" />
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" loading={loading} icon={<SendOutlined />}>
+                发布
+              </Button>
+              <Button onClick={() => navigate('/article')}>取消</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Card>
     </div>
   )
 }
