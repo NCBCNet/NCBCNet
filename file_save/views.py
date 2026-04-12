@@ -13,6 +13,9 @@ import asyncio
 from urllib.parse import quote
 from django.conf import settings
 import aiofiles
+import logging
+
+logger = logging.getLogger('django.request')
 
 # Helper function to get user in async context
 async def aget_user(request):
@@ -282,16 +285,17 @@ async def FileDownload(request, id):
     content_disposition = f'attachment; filename="{ascii_fallback}"; filename*=UTF-8\'\'{encoded_filename}'
     
     # 在开发环境中使用异步流式传输
-    if settings.DEBUG:
-        
-        # 创建流式响应
-        response = StreamingHttpResponse(
-            async_file_iterator(file_path),
-            content_type='application/octet-stream'
-        )
-        response['Content-Disposition'] = content_disposition
-        response['Content-Length'] = file_instance.file_size
-        return response
+    # if settings.DAPHNEON_IN_DEBUG:
+    #     if settings.DEBUG:
+
+            # 创建流式响应
+    response = StreamingHttpResponse(
+        async_file_iterator(file_path),
+        content_type='application/octet-stream'
+    )
+    response['Content-Disposition'] = content_disposition
+    response['Content-Length'] = file_instance.file_size
+    return response
 
     # 使用 os.path.relpath 确保路径正确
     relative_path = os.path.relpath(file_path, settings.MEDIA_ROOT)
@@ -301,6 +305,9 @@ async def FileDownload(request, id):
     response['Content-Type'] = 'application/octet-stream'
     response['Content-Disposition'] = content_disposition
     response['X-Accel-Redirect'] = internal_path
+
+    logger.warning(f"Debug Internal Path: {internal_path}")
+    logger.warning(f"Debug response: {response}")
     return response
 
 # @login_required(login_url='usermanage:login')

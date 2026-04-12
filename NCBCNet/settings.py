@@ -27,10 +27,15 @@ with open(file_path, 'r') as f:
     SECRET_KEY = file_content
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-DAPHNEON_IN_DEBUG = True
+DEBUG = False
+DAPHNEON_IN_DEBUG = False
 SQL_DEBUG = False
 # 一定注意生产环境下将上面两个调为Flase！！！
+'''
+DEBUG Django 的默认调试选项
+DAPHNEON_IN_DEBUG 这个选项用于是否启用daphne专属静态文件托管、媒体文件调试路径与调试数据库
+SQL_DEBUG 是否在DEBUG下使用sql（WSL）
+'''
 ALLOWED_HOSTS = ['*']
 
 # Security Settings
@@ -86,7 +91,7 @@ MIDDLEWARE = [
 
 if DEBUG:
     INSTALLED_APPS.append("sslserver")
-if DAPHNEON_IN_DEBUG or DEBUG:
+if DAPHNEON_IN_DEBUG:
     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 

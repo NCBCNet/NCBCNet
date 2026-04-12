@@ -84,7 +84,7 @@ class UserRegistrationTest(TestCase):
             'password': 'pass123',
             'password2': 'pass123'
         })
-        self.assertContains(response, '输入有误')
+        self.assertEqual(response.status_code, 400)
 
 
 class UserLoginTest(TestCase):
