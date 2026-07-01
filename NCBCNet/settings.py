@@ -27,8 +27,8 @@ with open(file_path, 'r') as f:
     SECRET_KEY = file_content
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-DAPHNEON_IN_DEBUG = False
+DEBUG = True
+DAPHNEON_IN_DEBUG = True
 SQL_DEBUG = False
 # 一定注意生产环境下将上面两个调为Flase！！！
 '''
@@ -57,6 +57,8 @@ SECURE_HSTS_PRELOAD = True
 
 INSTALLED_APPS = [
     "daphne",
+    "rest_framework",
+    'corsheaders',
     'simpleui',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -79,6 +81,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -341,3 +344,18 @@ MEDIA_ROOT = media_path
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# CORS 配置
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
