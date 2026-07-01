@@ -1,50 +1,56 @@
-version: '3.8'
-
 services:
   web:
     build:
       context: .
-    container_name: ncbcnet-web
+      args:
+        PYTHON_BASE_IMAGE: ${PYTHON_BASE_IMAGE:-python:3.12-slim}
+    image: ncbcnet-web:latest
     restart: unless-stopped
-    volumes:
-      - static_data:/usr/staticfiles
-      - media_data:/usr/mediafiles
-      - ./SECRET:/app/SECRET:ro
-      - ./certs:/etc/daphne/certs:ro
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             daphne
-             -e ssl:8000:privateKey=/etc/daphne/certs/privkey.pem:certKey=/etc/daphne/certs/fullchain.pem
-             NCBCNet.asgi:application"
-
-    ports:
-      - "8000:8000"      # 映射 Daphne 服务端口
+    env_file:
+      - .env
     environment:
-      - DJANGO_SETTINGS_MODULE=NCBCNet.settings
+      APP_ENV: production
+      DEBUG: "false"
+      ENABLE_HTTPS_REDIRECT: "true"
+      DJANGO_SETTINGS_MODULE: NCBCNet.settings
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DB_ENGINE: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_URL: redis://redis:6379/1
+      STATIC_ROOT: /app/staticfiles
+      MEDIA_ROOT: /app/mediafiles
+      RUN_MIGRATIONS: "1"
+      RUN_COLLECTSTATIC: "1"
+    volumes:
+      - static_data:/app/staticfiles
+      - media_data:/app/mediafiles
+      - ./SECRET:/app/SECRET:ro
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   nginx:
-    image: nginx:latest
-    container_name: ncbcnet-nginx
+    image: nginx:1.27-alpine
     restart: unless-stopped
-    ports:
-      - "80:80"          # 映射 Nginx HTTP 端口
-      - "443:443"        # 映射 Nginx HTTPS 端口
     depends_on:
       - web
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - static_data:/usr/staticfiles:ro
-      - media_data:/usr/mediafiles:ro
-      - ./certs:/www/server/certs:ro
-
+      - ./certs:/etc/nginx/certs:ro
+      - static_data:/var/www/static:ro
+      - media_data:/var/www/media:ro
 
   db:
     image: mysql:8.0
-    container_name: ncbcnet-mysql
     restart: unless-stopped
     command: --default-authentication-plugin=mysql_native_password
     env_file:
@@ -56,17 +62,22 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
-    container_name: ncbcnet-redis
     restart: unless-stopped
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 volumes:
   db_data:

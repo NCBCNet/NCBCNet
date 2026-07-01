@@ -12,3 +12,7 @@ venv/
 *.sqlite3
 *.sqlite
 /env/
+.env
+.env.*
+certs/
+frontend/node_modules/

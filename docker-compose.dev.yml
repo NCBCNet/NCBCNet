@@ -1,0 +1,80 @@
+services:
+  backend:
+    build:
+      context: .
+      args:
+        PYTHON_BASE_IMAGE: ${PYTHON_BASE_IMAGE:-python:3.12-slim}
+    environment:
+      APP_ENV: development
+      DEBUG: "true"
+      ENABLE_HTTPS_REDIRECT: "false"
+      DJANGO_SETTINGS_MODULE: NCBCNet.settings
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      DB_ENGINE: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-ncnetdb}
+      DB_USER: ${DB_USER:-ncnet}
+      DB_PASSWORD: ${DB_PASSWORD:-your_db_password}
+      REDIS_URL: redis://redis:6379/1
+      RUN_MIGRATIONS: "1"
+      RUN_COLLECTSTATIC: "0"
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app/frontend
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      VITE_PROXY_TARGET: http://backend:8000
+    volumes:
+      - ./:/app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-your_root_password}
+      MYSQL_DATABASE: ${DB_NAME:-ncnetdb}
+      MYSQL_USER: ${DB_USER:-ncnet}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-your_db_password}
+    volumes:
+      - db_data_dev:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db_data_dev:
+  redis_data_dev:

@@ -12,46 +12,66 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 from datetime import datetime
-from daphne.apps import DaphneConfig
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-file_path = 'SECRET'
+
+
+def env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() in ('1', 'true', 'yes', 'on')
+
+
+def env_list(name, default=''):
+    value = os.getenv(name, default)
+    return [item.strip() for item in value.split(',') if item.strip()]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-with open(file_path, 'r') as f:
-    file_content =f.read()
-    SECRET_KEY = file_content
+secret_key_from_env = os.getenv('DJANGO_SECRET_KEY') or os.getenv('SECRET_KEY')
+if secret_key_from_env:
+    SECRET_KEY = secret_key_from_env
+else:
+    secret_file = Path(os.getenv('DJANGO_SECRET_FILE', BASE_DIR / 'SECRET'))
+    if secret_file.exists():
+        SECRET_KEY = secret_file.read_text(encoding='utf-8').strip()
+    else:
+        SECRET_KEY = 'django-insecure-dev-only-key-change-me'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-DAPHNEON_IN_DEBUG = True
-SQL_DEBUG = False
+APP_ENV = os.getenv('APP_ENV', 'development').lower()
+DEBUG = env_bool('DEBUG', APP_ENV != 'production')
+DAPHNEON_IN_DEBUG = env_bool('DAPHNEON_IN_DEBUG', DEBUG)
+SQL_DEBUG = env_bool('SQL_DEBUG', False)
 # 一定注意生产环境下将上面两个调为Flase！！！
 '''
 DEBUG Django 的默认调试选项
 DAPHNEON_IN_DEBUG 这个选项用于是否启用daphne专属静态文件托管、媒体文件调试路径与调试数据库
 SQL_DEBUG 是否在DEBUG下使用sql（WSL）
 '''
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '*')
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', '')
 
 # Security Settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-CSRF_COOKIE_SECURE = True
+ENABLE_HTTPS_REDIRECT = env_bool('ENABLE_HTTPS_REDIRECT', not DEBUG)
 
-SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', ENABLE_HTTPS_REDIRECT)
 
-SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', ENABLE_HTTPS_REDIRECT)
+
+SECURE_SSL_REDIRECT = ENABLE_HTTPS_REDIRECT
 
 # HTTP Strict Transport Security (HSTS)
 # Start with a low value in production and increase once verified.
-SECURE_HSTS_SECONDS = 3600
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '3600' if ENABLE_HTTPS_REDIRECT else '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', ENABLE_HTTPS_REDIRECT)
+SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', ENABLE_HTTPS_REDIRECT)
 
 # Application definition
 
@@ -194,41 +214,32 @@ WSGI_APPLICATION = 'NCBCNet.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 # 生产环境使用MySQL数据库，开发环境使用SQLite数据库
 
-if SQL_DEBUG:
+db_engine = os.getenv('DB_ENGINE', 'sqlite' if DEBUG else 'mysql').lower()
+if SQL_DEBUG or db_engine == 'mysql':
+    default_db_host = '127.0.0.1' if DEBUG else 'db'
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': "ncnetdb",
-            'USER': "ncnet",
-            'PASSWORD': "dbuserpassword",
-            'HOST': "127.0.0.1",
-            'PORT': "3306",
+            'NAME': os.getenv('DB_NAME', 'ncnetdb'),
+            'USER': os.getenv('DB_USER', 'ncnet'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'dbuserpassword'),
+            'HOST': os.getenv('DB_HOST', default_db_host),
+            'PORT': os.getenv('DB_PORT', '3306'),
         }
     }
 else:
-    if DEBUG or DAPHNEON_IN_DEBUG :
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-            }
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.getenv('SQLITE_PATH', BASE_DIR / 'db.sqlite3'),
         }
-    else:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.mysql',
-                'NAME': "ncnetdb",
-                'USER': "ncnet",
-                'PASSWORD': "dbuserpassword",
-                'HOST': "127.0.0.1",
-                'PORT': "3306",
-            }
-        }
+    }
 # Redis 缓存配置
+default_redis_url = 'redis://127.0.0.1:6379/1' if DEBUG else 'redis://redis:6379/1'
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1", # /1 表示使用 Redis 的 1 号数据库
+        "LOCATION": os.getenv('REDIS_URL', default_redis_url), # /1 表示使用 Redis 的 1 号数据库
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             # 如果 Redis 设置了密码，取消下面这行的注释
@@ -236,7 +247,7 @@ CACHES = {
         }
     }
 }
-SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_ENGINE = os.getenv('SESSION_ENGINE', "django.contrib.sessions.backends.cache")
 SESSION_CACHE_ALIAS = "default"
 
 CONN_MAX_AGE = 60 * 60 * 1  # 数据库连接持续时间，单位为秒，这里设置为1小时
@@ -326,19 +337,13 @@ SIMPLEUI_ANALYSIS = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
-if DAPHNEON_IN_DEBUG:
-    staticfiles_path = os.path.join(BASE_DIR, "staticfiles/")
-    media_path = os.path.join(BASE_DIR, "media/")
-else:
-    staticfiles_path = "/usr/staticfiles/"
-    media_path = "/usr/mediafiles/"
-STATIC_ROOT = staticfiles_path
+STATIC_ROOT = os.getenv('STATIC_ROOT', os.path.join(BASE_DIR, "staticfiles/"))
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static/'),  # 添加此项
 ]
 MEDIA_URL = '/media/'
-MEDIA_ROOT = media_path
+MEDIA_ROOT = os.getenv('MEDIA_ROOT', os.path.join(BASE_DIR, "mediafiles/"))
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 

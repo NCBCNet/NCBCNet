@@ -1,53 +1,79 @@
-name: Docker Image CI
+﻿name: CI and Docker
 
 on:
+  pull_request:
+    branches: ["main", "Deploy"]
   push:
-    branches: [ "Deploy" ]
+    branches: ["main", "Deploy"]
+
 jobs:
-  test:
+  backend-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.12
-      - name: Install Dependencies
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run Tests
-        run: |
-          python manage.py test --settings=NCBCNet.test_settings
-  build_and_push:
-    needs: test
+          pip install -r requirements.docker.txt
+      - name: Run Django tests
+        run: python manage.py test --settings=NCBCNet.test_settings
+
+  frontend-build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
-      - name: login to ARC
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+
+  docker-build-push:
+    needs: [backend-tests, frontend-build]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.REGISTRY_NAME }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
-      - uses: actions/checkout@v4
-      - name: Set Tag Name
-        id: get_tag
-        run: echo "TAG=deploy-$(date +'%Y%m%d-%H%M%S')-${GITHUB_SHA:0:7}" >> $GITHUB_ENV
-      - name: Build the Docker image
-        run: docker build . --file Dockerfile --tag ncnet:${TAG}
-      - name: Save Docker image to tar
-        run: docker save ncnet:${TAG} -o image.tar
-      - name: Upload Docker image to release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          files: image.tar
-          tag_name: ${{ env.TAG }}
-          release_name: ${{ env.TAG }}
-          draft: false
-          prerelease: false
-      - name: Build and push in ARC
-        run: |
-          docker build -t ${{ secrets.REGISTRY_NAME }}:${TAG} .
-          docker push ${{ secrets.REGISTRY_NAME }}:${TAG}
+          images: ghcr.io/${{ github.repository_owner }}/ncbcnet
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
