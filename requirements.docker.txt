@@ -75,5 +75,6 @@ zhipuai==2.1.5.20230904
 zope.interface==8.2
 
 djangorestframework==3.16.1
+djangorestframework-simplejwt==5.5.1
 fakeredis==2.32.0
 PyMySQL==1.1.1

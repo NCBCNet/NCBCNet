@@ -1,23 +1,25 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
-  Card, Form, Input, Select, Button, Upload, message, Typography, Space,
+  Card, Form, Input, Select, Button, Upload, message, Typography, Space, Spin,
 } from 'antd'
 import {
-  PlusOutlined, InboxOutlined, ArrowLeftOutlined,
+  SaveOutlined, InboxOutlined, ArrowLeftOutlined,
 } from '@ant-design/icons'
 import MDEditor from '@uiw/react-md-editor'
 import api from '../services/api'
 import { useAuth } from '../store/authStore'
 
-const { Title, Text } = Typography
+const { Title } = Typography
 const { Dragger } = Upload
 
-function ArticleCreate() {
+function ArticleEdit() {
+  const { id } = useParams()
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
   const [columns, setColumns] = useState([])
   const [content, setContent] = useState('')
 
@@ -27,8 +29,27 @@ function ArticleCreate() {
       navigate('/usermanage/login')
       return
     }
+    fetchArticle()
     fetchColumns()
-  }, [isAuthenticated, navigate])
+  }, [id, isAuthenticated, navigate])
+
+  const fetchArticle = async () => {
+    try {
+      const res = await api.get(`/articles/${id}/`)
+      const article = res.data
+      form.setFieldsValue({
+        title: article.title,
+        column: article.column?.id || undefined,
+        tags: article.tags?.join(', ') || '',
+      })
+      setContent(article.content)
+    } catch {
+      message.error('文章不存在或无权编辑')
+      navigate('/article')
+    } finally {
+      setFetching(false)
+    }
+  }
 
   const fetchColumns = async () => {
     try {
@@ -51,22 +72,26 @@ function ArticleCreate() {
         formData.append('avatar', values.avatar.file.originFileObj)
       }
 
-      const res = await api.post('/articles/create/', formData, {
+      await api.put(`/articles/${id}/update/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      message.success('文章发布成功！')
-      navigate(`/article/article_detail/${res.data.id}`)
+      message.success('文章更新成功！')
+      navigate(`/article/article_detail/${id}`)
     } catch (err) {
       const errData = err.response?.data
       if (errData) {
         const msgs = Object.values(errData).flat().join('；')
-        message.error(msgs || '发布失败')
+        message.error(msgs || '更新失败')
       } else {
-        message.error('发布失败，请检查网络')
+        message.error('更新失败，请检查网络')
       }
     } finally {
       setLoading(false)
     }
+  }
+
+  if (fetching) {
+    return <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>
   }
 
   return (
@@ -75,12 +100,12 @@ function ArticleCreate() {
         type="link"
         icon={<ArrowLeftOutlined />}
         style={{ padding: 0, marginBottom: 16 }}
-        onClick={() => navigate('/article')}
+        onClick={() => navigate(`/article/article_detail/${id}`)}
       >
-        返回论坛
+        返回文章
       </Button>
 
-      <Title level={3} style={{ marginBottom: 24 }}>写文章</Title>
+      <Title level={3} style={{ marginBottom: 24 }}>编辑文章</Title>
 
       <Form
         form={form}
@@ -96,7 +121,7 @@ function ArticleCreate() {
             <Input placeholder="输入文章标题..." size="large" />
           </Form.Item>
 
-          <Form.Item label="标题图" name="avatar">
+          <Form.Item label="标题图（留空则保持原图）" name="avatar">
             <Dragger
               accept="image/*"
               maxCount={1}
@@ -106,7 +131,7 @@ function ArticleCreate() {
               <p className="ant-upload-drag-icon">
                 <InboxOutlined />
               </p>
-              <p className="ant-upload-text">点击或拖拽图片到此区域上传标题图</p>
+              <p className="ant-upload-text">点击或拖拽新图片替换标题图</p>
             </Dragger>
           </Form.Item>
 
@@ -125,7 +150,6 @@ function ArticleCreate() {
           </Space>
         </Card>
 
-        {/* Markdown 编辑器 */}
         <Card style={{ marginBottom: 24, borderRadius: 8 }} title="文章内容">
           <Form.Item
             name="content"
@@ -145,7 +169,7 @@ function ArticleCreate() {
         <div style={{ textAlign: 'right' }}>
           <Button
             style={{ marginRight: 12 }}
-            onClick={() => navigate('/article')}
+            onClick={() => navigate(`/article/article_detail/${id}`)}
           >
             取消
           </Button>
@@ -153,10 +177,10 @@ function ArticleCreate() {
             type="primary"
             htmlType="submit"
             loading={loading}
-            icon={<PlusOutlined />}
+            icon={<SaveOutlined />}
             style={{ background: '#6f42c1', borderColor: '#6f42c1' }}
           >
-            发布文章
+            保存修改
           </Button>
         </div>
       </Form>
@@ -164,4 +188,4 @@ function ArticleCreate() {
   )
 }
 
-export default ArticleCreate
+export default ArticleEdit

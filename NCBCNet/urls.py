@@ -21,6 +21,11 @@ from server import views
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.views import serve
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
+)
 # import notifications.urls
 
 urlpatterns = [
@@ -36,6 +41,13 @@ urlpatterns = [
     path("ckeditor5/", include('django_ckeditor_5.urls')),
     # path('^inbox/notifications/', include(notifications.urls, namespace='notifications')),
 
+    # JWT Authentication
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+
+    # API
+    path('api/', include('api.urls')),
 ]
 
 if settings.DEBUG:
