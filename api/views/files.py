@@ -31,9 +31,10 @@ def _sign_download(file_id, exp):
 
 
 class FolderListView(generics.ListCreateAPIView):
-    """文件夹列表/创建"""
+    """文件夹列表/创建（不分页，前端网格直接消费数组）"""
     serializer_class = FolderSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         user = self.request.user
@@ -54,9 +55,10 @@ class FolderDeleteView(generics.DestroyAPIView):
 
 
 class FileListView(generics.ListAPIView):
-    """文件列表"""
+    """文件列表（不分页，前端网格直接消费数组）"""
     serializer_class = FileSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         user = self.request.user
@@ -108,9 +110,10 @@ class FileShareToggleView(APIView):
 
 
 class SharedFileListView(generics.ListAPIView):
-    """共享文件列表（其他用户共享的文件）"""
+    """共享文件列表（其他用户共享的文件，不分页）"""
     serializer_class = FileSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         return list_shared_files(self.request.user)

@@ -140,3 +140,72 @@ class ApiBoundaryTests(TestCase):
             [],
             f'api 包不得导入业务应用 models，发现 {len(violations)} 处违规: {violations}',
         )
+
+
+class PaginationContractTests(TestCase):
+    """列表类端点契约：除文章列表外，其余列表应返回数组（前端直接 map），而非分页对象。"""
+
+    def test_columns_endpoint_returns_plain_list(self):
+        resp = Client().get('/api/v1/articles/columns/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.json(), list)
+
+    def test_folders_endpoint_returns_plain_list(self):
+        User.objects.create_user('bob', password='pass12345')
+        client = Client()
+        client.get('/api/v1/auth/csrf/')
+        csrf = client.cookies['csrftoken'].value
+        login = client.post(
+            '/api/v1/auth/login/',
+            data={'username': 'bob', 'password': 'pass12345'},
+            content_type='application/json',
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(login.status_code, 200)
+        resp = client.get('/api/v1/folders/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.json(), list)
+
+
+class ArticleContractTests(TestCase):
+    """文章创建契约：创建响应必须带 id（前端据此跳转到详情页）。"""
+
+    def test_create_article_returns_id(self):
+        User.objects.create_user('writer', password='pass12345')
+        client = Client(enforce_csrf_checks=True)
+        client.get('/api/v1/auth/csrf/')
+        csrf = client.cookies['csrftoken'].value
+        login = client.post(
+            '/api/v1/auth/login/',
+            data={'username': 'writer', 'password': 'pass12345'},
+            content_type='application/json',
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(login.status_code, 200)
+        csrf = client.cookies['csrftoken'].value  # 登录后 CSRF 已轮换
+        resp = client.post(
+            '/api/v1/articles/create/',
+            data={'title': '测试标题', 'content': '测试内容'},
+            content_type='application/json',
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(resp.status_code, 201, resp.json())
+        self.assertIn('id', resp.json())
+        self.assertIsInstance(resp.json()['id'], int)
+
+
+class HealthComponentsTests(TestCase):
+    """组件级健康端点契约：返回各组件状态（脱敏）。"""
+
+    def test_health_components_returns_status(self):
+        resp = Client().get('/api/v1/health/components/')
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertIn('status', body)
+        self.assertIn('components', body)
+        for key in ('database', 'cache', 'storage'):
+            self.assertIn(key, body['components'])
+            comp = body['components'][key]
+            self.assertIn('status', comp)
+            self.assertIn('message', comp)
+            self.assertIn('latency_ms', comp)

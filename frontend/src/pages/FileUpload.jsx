@@ -1,54 +1,42 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Button, Card, Progress, Select, Space, Typography, Upload, message,
+  Button, Card, Select, Space, Typography, Upload, message,
 } from 'antd'
 import { ArrowLeftOutlined, InboxOutlined } from '@ant-design/icons'
 import api from '../services/api'
-import { computeUploadProgress, formatEta, formatSpeed } from '../utils/uploadProgress'
+import { useUpload } from '../store/uploadStore'
 
 const { Title, Text } = Typography
 const { Dragger } = Upload
 
 function FileUpload() {
   const navigate = useNavigate()
+  const { uploadFile } = useUpload()
   const [folders, setFolders] = useState([])
   const [folderId, setFolderId] = useState(undefined)
   const [uploading, setUploading] = useState(false)
-  const [progress, setProgress] = useState({ percent: 0, speed: 0, eta: 0 })
-  const samples = useRef([])
 
-  // 载入顶层文件夹供选择（不支持嵌套选择，嵌套上传请进入云盘对应文件夹后使用快速上传）
+  // 载入顶层文件夹供选择（嵌套选择请进入云盘对应文件夹后使用快速上传）
   useEffect(() => {
     api.get('/folders/')
       .then((res) => setFolders(res.data))
       .catch(() => {})
   }, [])
 
-  const handleUpload = useCallback(async ({ file, onSuccess, onError }) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    if (folderId) formData.append('folder', folderId)
-
-    samples.current = []
+  const handleUpload = async ({ file, onSuccess, onError }) => {
     setUploading(true)
-    setProgress({ percent: 0, speed: 0, eta: 0 })
-
-    try {
-      await api.post('/files/upload/', formData, {
-        onUploadProgress: (event) => setProgress(computeUploadProgress(event, samples)),
-      })
+    const { ok } = await uploadFile(file, folderId)
+    setUploading(false)
+    if (ok) {
       message.success(`「${file.name}」上传成功`)
-      setProgress((prev) => ({ ...prev, percent: 100 }))
       onSuccess?.()
       navigate('/file_up/file_list')
-    } catch (err) {
-      message.error(err.response?.data?.message || `「${file.name}」上传失败`)
-      onError?.(err)
-    } finally {
-      setUploading(false)
+    } else {
+      message.error(`「${file.name}」上传失败`)
+      onError?.()
     }
-  }, [folderId, navigate])
+  }
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
@@ -91,12 +79,9 @@ function FileUpload() {
           </Dragger>
 
           {uploading && (
-            <div>
-              <Progress percent={progress.percent} />
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {formatSpeed(progress.speed)} · 剩余 {formatEta(progress.eta)}
-              </Text>
-            </div>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              上传中… 进度与速度见右上角「上传任务」
+            </Text>
           )}
         </Space>
       </Card>

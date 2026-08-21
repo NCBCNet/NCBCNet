@@ -16,3 +16,4 @@ venv/
 .env.*
 certs/
 frontend/node_modules/
+/.dsh/

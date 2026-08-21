@@ -18,16 +18,20 @@
 | --- | --- |
 | Python 3.12 | Django 后端 |
 | Node.js 20+ | Vite 前端 |
-| MySQL 8 | 业务数据库 |
-| Redis 7 | 缓存 / 会话 / 队列 |
+| MySQL 8 | 生产数据库（开发默认 SQLite，可跳过） |
+| Redis 7 | 生产缓存/会话/队列（开发默认进程内缓存，可跳过） |
 
-### 2.2 首次准备
+### 2.2 首次准备（开发零配置）
 
 ```bash
-cp .env.example .env     # 按需修改 DB / 主机白名单
+# 只需装依赖；无需 .env、无需 MySQL/Redis（开发默认 SQLite + 进程内缓存）
 pip install -r requirements.txt
 cd frontend && npm install && cd ..
 ```
+
+> 开发环境无需任何环境变量：`SECRET_KEY` 用开发默认值、数据库用 `db.sqlite3`、
+> 缓存用进程内 `LocMemCache`、主机白名单与 CSRF 来源默认放行本地。
+> 只有**生产**才需要 `.env`（见第 3 节），且缺失 `DJANGO_SECRET_KEY`/`ALLOWED_HOSTS` 会拒绝启动。
 
 ### 2.3 启动
 
@@ -44,7 +48,7 @@ cd frontend && npm run dev -- --host 0.0.0.0 --port 5173
 
 - 认证为 **HttpOnly Cookie JWT**（`nc_access` / `nc_refresh`），前端不存 token。
 - 写请求必须携带 `X-CSRFToken`（取自 `csrftoken` Cookie，前端挂载时调用 `GET /api/v1/auth/csrf/` 获取）。
-- 开发环境 `CSRF_TRUSTED_ORIGINS` 需包含 Vite 来源（如 `http://localhost:5173`，见 `.env.example`）。
+- 开发环境 `CSRF_TRUSTED_ORIGINS` 已内置默认值（`http://localhost:5173` 等），无需手动配置；仅在自定义端口/域名时才需覆盖。
 
 ### 2.5 常用命令
 

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Breadcrumb, Button, Card, Col, Empty, Input, List, Modal, Progress, Row,
+  Breadcrumb, Button, Card, Col, Empty, Input, List, Modal, Row,
   Space, Spin, Statistic, Tag, Tooltip, Tree, Typography, Upload, message,
 } from 'antd'
 import {
@@ -10,7 +10,8 @@ import {
 } from '@ant-design/icons'
 import api from '../services/api'
 import { useAuth } from '../store/authStore'
-import { computeUploadProgress, formatEta, formatSize, formatSpeed } from '../utils/uploadProgress'
+import { useUpload } from '../store/uploadStore'
+import { formatSize } from '../utils/uploadProgress'
 
 const { Title, Text } = Typography
 const { Dragger } = Upload
@@ -20,6 +21,7 @@ const ROOT_TREE_KEY = 'folder-root'
 function FileList() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { uploadFile } = useUpload()
 
   // 当前浏览路径（从根目录开始的文件夹链），currentFolderId 由路径末位推导
   const [folderPath, setFolderPath] = useState([])
@@ -40,10 +42,8 @@ function FileList() {
   const [newFolderName, setNewFolderName] = useState('')
   const [creating, setCreating] = useState(false)
 
-  // 上传进度
+  // 上传状态（进度/速度/剩余时间统一由 uploadStore 的上传任务中心展示）
   const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState({ percent: 0, speed: 0, eta: 0 })
-  const uploadSamples = useRef([])
 
   const currentFolderId = folderPath.length > 0 ? folderPath[folderPath.length - 1].id : null
 
@@ -245,30 +245,17 @@ function FileList() {
   // ---------- 上传 ----------
 
   const handleUpload = async ({ file, onSuccess, onError }) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    if (currentFolderId) formData.append('folder', currentFolderId)
-
-    uploadSamples.current = []
     setUploading(true)
-    setUploadProgress({ percent: 0, speed: 0, eta: 0 })
-
-    try {
-      await api.post('/files/upload/', formData, {
-        onUploadProgress: (event) => {
-          setUploadProgress(computeUploadProgress(event, uploadSamples))
-        },
-      })
+    const { ok } = await uploadFile(file, currentFolderId)
+    setUploading(false)
+    if (ok) {
       message.success(`文件「${file.name}」上传成功`)
-      setUploadProgress((prev) => ({ ...prev, percent: 100 }))
       onSuccess?.()
       fetchFolderContents(folderPath)
       fetchSharedFiles()
-    } catch (err) {
-      message.error(err.response?.data?.message || `文件「${file.name}」上传失败`)
-      onError?.(err)
-    } finally {
-      setUploading(false)
+    } else {
+      message.error(`文件「${file.name}」上传失败`)
+      onError?.()
     }
   }
 
@@ -354,9 +341,8 @@ function FileList() {
             </Dragger>
             {uploading && (
               <div style={{ marginTop: 12 }}>
-                <Progress percent={uploadProgress.percent} size="small" />
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  {formatSpeed(uploadProgress.speed)} · 剩余 {formatEta(uploadProgress.eta)}
+                  上传中… 进度与速度见右上角「上传任务」
                 </Text>
               </div>
             )}

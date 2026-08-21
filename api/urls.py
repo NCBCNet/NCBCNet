@@ -34,11 +34,12 @@ from api.views.comments import (
     CommentCreateView,
     CommentReplyView,
 )
-from api.views.health import HealthView
+from api.views.health import HealthComponentsView, HealthView
 
 urlpatterns = [
     # 健康检查
     path('health/', HealthView.as_view(), name='api_health'),
+    path('health/components/', HealthComponentsView.as_view(), name='api_health_components'),
 
     # 认证（HttpOnly Cookie JWT）
     path('auth/csrf/', CsrfCookieView.as_view(), name='api_csrf'),

@@ -6,6 +6,7 @@ import zhCN from 'antd/locale/zh_CN'
 import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './store/authStore'
+import { UploadProvider } from './store/uploadStore'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -33,7 +34,9 @@ createRoot(document.getElementById('root')).render(
         }}
       >
         <AuthProvider>
-          <App />
+          <UploadProvider>
+            <App />
+          </UploadProvider>
         </AuthProvider>
       </ConfigProvider>
     </Router>

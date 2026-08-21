@@ -17,6 +17,7 @@ import {
 import './App.css'
 import { useAuth } from './store/authStore'
 import ErrorBoundary from './components/ErrorBoundary'
+import UploadPanel from './components/UploadPanel'
 
 // 路由级代码分割（React.lazy + Suspense），降低首屏包体积
 const Home = lazy(() => import('./pages/Home'))
@@ -33,6 +34,7 @@ const About = lazy(() => import('./pages/About'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const Forbidden = lazy(() => import('./pages/Forbidden'))
 const ServerError = lazy(() => import('./pages/ServerError'))
+const Health = lazy(() => import('./pages/Health'))
 
 const { Header, Content, Footer } = Layout
 
@@ -145,7 +147,8 @@ function App() {
             onClick={({ key }) => key !== '#' && navigate(key)}
           />
         </div>
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <UploadPanel />
           {isAuthenticated ? (
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
               <Button
@@ -193,6 +196,7 @@ function App() {
               <Route path="/file_up/file_upload" element={<FileUpload />} />
               <Route path="/usermanage/profile/:id" element={<Profile />} />
               <Route path="/server/about" element={<About />} />
+              <Route path="/health" element={<Health />} />
               <Route path="/403" element={<Forbidden />} />
               <Route path="/500" element={<ServerError />} />
               <Route path="/404" element={<NotFound />} />
@@ -203,6 +207,12 @@ function App() {
       </Content>
       <Footer className="app-footer">
         Copyright &copy; www.ncbcstudent.top 2024-2026 v0.5.8.0
+        <a
+          style={{ marginLeft: 12, color: '#6f42c1' }}
+          onClick={() => navigate('/health')}
+        >
+          网站状态
+        </a>
       </Footer>
     </Layout>
   )

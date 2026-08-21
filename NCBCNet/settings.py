@@ -54,7 +54,28 @@ DAPHNEON_IN_DEBUG 这个选项用于是否启用daphne专属静态文件托管�
 SQL_DEBUG 是否在DEBUG下使用sql（WSL）
 '''
 ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '*')
-CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', '')
+# CSRF 可信来源：开发环境(DEBUG=True)默认信任 Vite 代理来源，免去手动配置；
+# 生产(DEBUG=False)默认空，必须显式配置真实域名（https://你的域名）。
+# 显式设置 CSRF_TRUSTED_ORIGINS 环境变量时始终以环境变量为准。
+_default_csrf_origins = (
+    'http://localhost:5173,http://127.0.0.1:5173,'
+    'http://localhost:8000,http://127.0.0.1:8000'
+) if DEBUG else ''
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', _default_csrf_origins)
+
+# 生产环境关键配置校验：缺失/不安全时立即失败，避免带着开发默认值上线。
+# 开发(DEBUG=True)跳过本校验，零配置即可运行。
+if not DEBUG:
+    from django.core.exceptions import ImproperlyConfigured
+    if SECRET_KEY == 'django-insecure-dev-only-key-change-me':
+        raise ImproperlyConfigured(
+            '生产环境必须设置 DJANGO_SECRET_KEY（环境变量）或提供 SECRET 文件，'
+            '不能使用开发默认密钥。'
+        )
+    if '*' in ALLOWED_HOSTS or not ALLOWED_HOSTS:
+        raise ImproperlyConfigured(
+            '生产环境必须显式设置 ALLOWED_HOSTS，不允许通配符 *。'
+        )
 
 # Security Settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -283,19 +304,30 @@ else:
             'NAME': os.getenv('SQLITE_PATH', BASE_DIR / 'db.sqlite3'),
         }
     }
-# Redis 缓存配置
-default_redis_url = 'redis://127.0.0.1:6379/1' if DEBUG else 'redis://redis:6379/1'
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.getenv('REDIS_URL', default_redis_url), # /1 表示使用 Redis 的 1 号数据库
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            # 如果 Redis 设置了密码，取消下面这行的注释
-            # "PASSWORD": "你的密码",
+# 缓存配置：
+# - 开发(DEBUG=True)且未显式指定 REDIS_URL：使用进程内缓存 LocMemCache，免装 Redis。
+# - 生产(DEBUG=False)：默认 redis://redis:6379/1（Compose 服务名），或用 REDIS_URL 覆盖。
+# - 任意环境显式设置 REDIS_URL 时，始终使用 Redis（如开发期要测试队列/共享缓存）。
+_redis_url = os.getenv('REDIS_URL')
+if DEBUG and not _redis_url:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "ncbcnet-dev-cache",
         }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": _redis_url or 'redis://redis:6379/1',
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                # 如果 Redis 设置了密码，取消下面这行的注释
+                # "PASSWORD": "你的密码",
+            }
+        }
+    }
 SESSION_ENGINE = os.getenv('SESSION_ENGINE', "django.contrib.sessions.backends.cache")
 SESSION_CACHE_ALIAS = "default"
 

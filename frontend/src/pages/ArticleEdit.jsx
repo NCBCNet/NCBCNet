@@ -61,6 +61,10 @@ function ArticleEdit() {
   }
 
   const onFinish = async (values) => {
+    if (!content.trim()) {
+      message.warning('请输入文章内容')
+      return
+    }
     setLoading(true)
     try {
       const formData = new FormData()
@@ -151,11 +155,7 @@ function ArticleEdit() {
         </Card>
 
         <Card style={{ marginBottom: 24, borderRadius: 8 }} title="文章内容">
-          <Form.Item
-            name="content"
-            rules={[{ required: true, message: '请输入文章内容' }]}
-            style={{ marginBottom: 0 }}
-          >
+          <Form.Item style={{ marginBottom: 0 }}>
             <MDEditor
               value={content}
               onChange={setContent}

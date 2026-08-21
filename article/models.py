@@ -36,15 +36,20 @@ class Article(models.Model):
     #     default="at",
     # )
 
-    def save(self,*args ,**kwargs):
-        article = super(Article,self).save(*args,**kwargs)
+    def save(self, *args, **kwargs):
+        article = super(Article, self).save(*args, **kwargs)
         if self.avatar and not kwargs.get('update_fields'):
-            image = Image.open(self.avatar)
-            (x,y) = image.size
-            new_x = 400
-            new_y = int(new_x*y/x)
-            resized_image = image.resize((new_x,new_y),Image.ANTIALIAS) # Pillow新版无法使用
-            resized_image.save(self.avatar.path)
+            # Pillow 10+ 已移除 Image.ANTIALIAS，改用 Image.Resampling.LANCZOS
+            try:
+                with Image.open(self.avatar.path) as img:
+                    (x, y) = img.size
+                    new_x = 400
+                    new_y = int(new_x * y / x) if x else 400
+                    resized = img.resize((new_x, new_y), Image.Resampling.LANCZOS)
+                resized.save(self.avatar.path)
+            except Exception:
+                # 缩略失败（损坏图片/非本地存储）不阻断保存
+                pass
         return article
     column = models.ForeignKey(ArticleColumn,null=True,blank=True,on_delete=models.CASCADE,related_name='article')
     tags = TaggableManager(blank=True)

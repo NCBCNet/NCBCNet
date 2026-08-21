@@ -85,7 +85,8 @@ class IncreaseLikesView(APIView):
 
 
 class ArticleColumnListView(generics.ListAPIView):
-    """栏目列表"""
+    """栏目列表（不分页，前端下拉/筛选直接消费数组）"""
     queryset = list_columns()
     serializer_class = ArticleColumnSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
