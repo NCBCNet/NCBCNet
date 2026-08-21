@@ -9,12 +9,11 @@ from .forms import UserLoginForm,UserRegisterForm,ProfileForm
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from .models import Profile
-from django_ratelimit.decorators import ratelimit
-from django_ratelimit.core import is_ratelimited
 # from django.views.decorators.http import require_http_methods
 # Create your views here.
 
-# @ratelimit(key='ip', rate='10/m', block=True)
+# 注意：限流已统一迁移到 DRF throttle（api/throttles.py），
+# 旧模板登录/注册由 SPA 的 /api/v1/auth/* 端点（带限流）取代。
 async def user_register(request):
     if request.method == 'POST':
         form = UserRegisterForm(data=request.POST)
@@ -43,21 +42,8 @@ async def user_register(request):
     else:
         return HttpResponse("仅允许GET或POST")
 
-# @ratelimit(key='ip', rate='10/m',method='POST', block=True)
 async def user_login(request):
     if request.method == 'POST':
-        was_limited = await sync_to_async(is_ratelimited)(
-            request,
-            key='ip',
-            rate='5/m',
-            method="POST",
-            increment=True,
-            group='user_login'
-        )
-        if was_limited:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'message': '请求过于频繁，请稍后再试'}, status=429)
-            return HttpResponse("请求过于频繁，请稍后再试", status=429)
         form = UserLoginForm(data=request.POST)
         if form.is_valid():
             data = form.cleaned_data

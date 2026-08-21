@@ -1,6 +1,29 @@
+"""usermanage 序列化器（从 api/serializers/auth.py 迁移，类名与字段保持不变）。
+
+ORM 写入收敛到 usermanage.services（register_user）。
+"""
+from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework import serializers
+
 from usermanage.models import Profile
+from usermanage.services import register_user
+
+
+class LoginSerializer(serializers.Serializer):
+    """登录序列化器（校验账号密码，返回 user）。"""
+
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
+
+    def validate(self, attrs):
+        user = authenticate(username=attrs['username'], password=attrs['password'])
+        if user is None:
+            raise serializers.ValidationError('账号或密码错误')
+        if not user.is_active:
+            raise serializers.ValidationError('该账号已被禁用')
+        attrs['user'] = user
+        return attrs
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -32,12 +55,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password2')
-        user = User.objects.create_user(
+        return register_user(
             username=validated_data['username'],
+            password=validated_data['password'],
             email=validated_data.get('email', ''),
-            password=validated_data['password']
         )
-        return user
 
 
 class ProfileSerializer(serializers.ModelSerializer):

@@ -34,12 +34,24 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/', timeout=5)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
+  # nginx now serves the built SPA (docker/nginx.Dockerfile) and reverse-proxies
+  # /api/ and /admin/ to the web service; /static/ and /media/ come from the
+  # shared named volumes. Starts only once the web service is healthy.
   nginx:
-    image: nginx:1.27-alpine
+    build:
+      context: .
+      dockerfile: docker/nginx.Dockerfile
     restart: unless-stopped
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
@@ -78,6 +90,39 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  # 后台任务 worker（阶段三）：同一镜像，运行 RQ worker 消费 Redis 队列。
+  # 用于 AI 调用、缩略图生成、通知推送、文件后处理等异步任务（core/tasks.py）。
+  worker:
+    build:
+      context: .
+      args:
+        PYTHON_BASE_IMAGE: ${PYTHON_BASE_IMAGE:-python:3.12-slim}
+    image: ncbcnet-web:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      DEBUG: "false"
+      DJANGO_SETTINGS_MODULE: NCBCNet.settings
+      DB_ENGINE: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_URL: redis://redis:6379/1
+      RUN_MIGRATIONS: "0"
+      RUN_COLLECTSTATIC: "0"
+    command: rq worker --with-scheduler
+    volumes:
+      - media_data:/app/mediafiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   db_data:

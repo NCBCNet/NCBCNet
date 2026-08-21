@@ -1,36 +1,50 @@
 from django.urls import path
 
 from api.views.auth import (
-    RegisterView,
-    UserDetailView,
-    UserDeleteView,
     CheckAuthView,
+    CsrfCookieView,
+    LoginView,
+    LogoutView,
+    RefreshView,
+    RegisterView,
+    UserDeleteView,
+    UserDetailView,
 )
 from api.views.articles import (
-    ArticleListView,
-    ArticleDetailView,
-    ArticleCreateView,
-    ArticleUpdateView,
-    ArticleDeleteView,
-    IncreaseLikesView,
     ArticleColumnListView,
+    ArticleCreateView,
+    ArticleDeleteView,
+    ArticleDetailView,
+    ArticleListView,
+    ArticleUpdateView,
+    IncreaseLikesView,
 )
 from api.views.files import (
-    FolderListView,
-    FolderDeleteView,
-    FileListView,
-    FileUploadView,
     FileDeleteView,
+    FileDownloadUrlView,
+    FileDownloadView,
+    FileListView,
     FileShareToggleView,
+    FileUploadView,
+    FolderDeleteView,
+    FolderListView,
     SharedFileListView,
 )
 from api.views.comments import (
     CommentCreateView,
     CommentReplyView,
 )
+from api.views.health import HealthView
 
 urlpatterns = [
-    # 认证
+    # 健康检查
+    path('health/', HealthView.as_view(), name='api_health'),
+
+    # 认证（HttpOnly Cookie JWT）
+    path('auth/csrf/', CsrfCookieView.as_view(), name='api_csrf'),
+    path('auth/login/', LoginView.as_view(), name='api_login'),
+    path('auth/logout/', LogoutView.as_view(), name='api_logout'),
+    path('auth/refresh/', RefreshView.as_view(), name='api_refresh'),
     path('auth/register/', RegisterView.as_view(), name='api_register'),
     path('auth/me/', UserDetailView.as_view(), name='api_user_detail'),
     path('auth/delete/', UserDeleteView.as_view(), name='api_user_delete'),
@@ -57,4 +71,6 @@ urlpatterns = [
     path('files/shared/', SharedFileListView.as_view(), name='api_shared_files'),
     path('files/<int:pk>/delete/', FileDeleteView.as_view(), name='api_file_delete'),
     path('files/<int:pk>/share/', FileShareToggleView.as_view(), name='api_file_share'),
+    path('files/<int:pk>/download-url/', FileDownloadUrlView.as_view(), name='api_file_download_url'),
+    path('files/<int:pk>/download/', FileDownloadView.as_view(), name='api_file_download'),
 ]

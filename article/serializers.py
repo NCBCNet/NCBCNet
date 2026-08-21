@@ -1,7 +1,14 @@
+"""article 序列化器（从 api/serializers/articles.py 迁移，类名与字段保持不变）。
+
+ORM 写入收敛到 article.services（create_article / update_article）。
+评论序列化器随评论一起归入文章域（ADR-004）。
+"""
+import markdown
 from rest_framework import serializers
-from article.models import Article, ArticleColumn
-from comment.models import Comment
-from api.serializers.auth import UserSerializer
+
+from article.models import Article, ArticleColumn, Comment
+from article.services import create_article, update_article
+from usermanage.serializers import UserSerializer
 
 
 class ArticleColumnSerializer(serializers.ModelSerializer):
@@ -72,7 +79,6 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
         return CommentSerializer(top_comments, many=True).data
 
     def get_content_html(self, obj):
-        import markdown
         md = markdown.Markdown(extensions=[
             'markdown.extensions.extra',
             'markdown.extensions.codehilite',
@@ -81,7 +87,6 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
         return md.convert(obj.content)
 
     def get_toc(self, obj):
-        import markdown
         md = markdown.Markdown(extensions=[
             'markdown.extensions.extra',
             'markdown.extensions.codehilite',
@@ -100,21 +105,16 @@ class ArticleCreateSerializer(serializers.ModelSerializer):
         fields = ['title', 'content', 'avatar', 'column', 'tags']
 
     def create(self, validated_data):
-        tags_str = validated_data.pop('tags', '')
-        article = Article.objects.create(**validated_data)
-        if tags_str:
-            tag_names = [t.strip() for t in tags_str.split(',') if t.strip()]
-            article.tags.add(*tag_names)
-        return article
+        tags = validated_data.pop('tags', '')
+        return create_article(
+            author=validated_data.pop('author'),
+            title=validated_data['title'],
+            content=validated_data['content'],
+            column=validated_data.get('column'),
+            avatar=validated_data.get('avatar'),
+            tags=tags,
+        )
 
     def update(self, instance, validated_data):
-        tags_str = validated_data.pop('tags', None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        if tags_str is not None:
-            instance.tags.clear()
-            tag_names = [t.strip() for t in tags_str.split(',') if t.strip()]
-            if tag_names:
-                instance.tags.add(*tag_names)
-        return instance
+        tags = validated_data.pop('tags', None)
+        return update_article(instance, tags=tags, **validated_data)

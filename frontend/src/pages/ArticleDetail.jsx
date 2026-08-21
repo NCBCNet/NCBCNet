@@ -12,6 +12,7 @@ import {
 import DOMPurify from 'dompurify'
 import api from '../services/api'
 import { useAuth } from '../store/authStore'
+import CommentTree from '../components/CommentTree'
 
 const { Title, Text, Paragraph } = Typography
 const { TextArea } = Input
@@ -126,38 +127,7 @@ function ArticleDetail() {
     setCommentText('')
   }
 
-  // 递归渲染评论
-  const renderComment = (comment, depth = 0) => (
-    <div key={comment.id} style={{ marginLeft: depth > 0 ? 40 : 0, marginTop: 16 }}>
-      <div style={{
-        padding: '12px 16px',
-        background: depth > 0 ? '#fafafa' : '#fff',
-        borderRadius: 8,
-        border: '1px solid #f0f0f0',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: '#6f42c1' }} />
-          <Text strong style={{ color: '#6f42c1' }}>{comment.user?.username}</Text>
-          {comment.reply_to && (
-            <>
-              <Text type="secondary" style={{ fontSize: 13 }}>
-                <HeartFilled style={{ color: '#6f42c1', fontSize: 10 }} /> 回复
-              </Text>
-              <Text strong style={{ color: '#6f42c1' }}>{comment.reply_to?.username}</Text>
-            </>
-          )}
-          <Text type="secondary" style={{ fontSize: 12 }}>{comment.created}</Text>
-        </div>
-        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(comment.content) }} />
-        <div style={{ marginTop: 8 }}>
-          <Button type="link" size="small" onClick={() => handleReply(comment)}>
-            回复
-          </Button>
-        </div>
-      </div>
-      {comment.children?.map((child) => renderComment(child, depth + 1))}
-    </div>
-  )
+  // 递归评论渲染已抽取到 components/CommentTree.jsx
 
   if (loading) {
     return <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>
@@ -290,7 +260,7 @@ function ArticleDetail() {
           {comments.length === 0 ? (
             <Empty description="暂无评论，快来抢沙发吧！" />
           ) : (
-            comments.map((comment) => renderComment(comment))
+            <CommentTree comments={comments} onReply={handleReply} />
           )}
         </div>
       </Col>

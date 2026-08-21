@@ -5,6 +5,8 @@ from django.urls import reverse
 from mdeditor.fields import MDTextField
 from taggit.managers import TaggableManager
 from PIL import Image
+from mptt.models import MPTTModel, TreeForeignKey
+from django_ckeditor_5.fields import CKEditor5Field
 
 # Create your models here.
 class Articletest(models.Model):
@@ -57,4 +59,26 @@ class Article(models.Model):
         return self.title
     def get_absolute_url(self):
         return reverse('article:article_detail',args=[self.id])
+
+class Comment(MPTTModel):
+    """评论（ADR-004：从 comment 应用并入文章域）。
+
+    db_table 保留为 comment_comment，物理表在既有安装中已存在，
+    迁移 0006 使用 SeparateDatabaseAndState 只登记状态、不重复建表。
+    """
+    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+    reply_to = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='replyers')
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    content = CKEditor5Field(config_name='extends')
+    created = models.DateTimeField(auto_now_add=True)
+
+    class MPTTMeta:
+        order_insertion_by = ['created']
+
+    class Meta:
+        db_table = 'comment_comment'
+
+    def __str__(self):
+        return self.content[:20]
 

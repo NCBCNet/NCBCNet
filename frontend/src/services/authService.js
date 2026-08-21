@@ -1,51 +1,72 @@
 import api from './api';
 
+/**
+ * 认证服务：HttpOnly Cookie + CSRF 认证方案。
+ * 前端不再存储任何 token —— 访问/刷新凭据均存放在 HttpOnly Cookie 中，
+ * 由浏览器自动携带，服务端自动轮换。
+ */
+
+// 内存中的登录标记（仅用于便捷判断，真正的认证状态以 Cookie/服务端为准）
+let _authenticated = false;
+
+/**
+ * 设置内存登录标记（供内部及测试使用）。
+ * @param {boolean} value
+ */
+export function setAuthenticated(value) {
+  _authenticated = !!value;
+}
+
 export const authService = {
   /**
    * 用户登录
    * @param {string} username
    * @param {string} password
-   * @returns {Promise<{access: string, refresh: string}>}
+   * @returns {Promise<{success: boolean, message: string, user: object}>}
    */
   async login(username, password) {
-    const response = await api.post('/token/', { username, password });
-    const { access, refresh } = response.data;
-    localStorage.setItem('access_token', access);
-    localStorage.setItem('refresh_token', refresh);
+    const response = await api.post('/auth/login/', { username, password });
+    setAuthenticated(true);
     return response.data;
   },
 
   /**
-   * 用户注册
+   * 用户注册（注册成功后自动登录，服务端写入 Cookie）
    * @param {object} data - { username, email, password, password2 }
-   * @returns {Promise<{access: string, refresh: string, user: object}>}
+   * @returns {Promise<{success: boolean, message: string, user: object}>}
    */
   async register(data) {
     const response = await api.post('/auth/register/', data);
-    const { access, refresh } = response.data;
-    if (access && refresh) {
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
-    }
+    setAuthenticated(true);
     return response.data;
   },
 
   /**
-   * 退出登录
-   */
-  logout() {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-  },
-
-  /**
-   * 获取当前用户信息
+   * 退出登录：调用服务端清除 HttpOnly Cookie
    * @returns {Promise<object>}
    */
+  async logout() {
+    try {
+      const response = await api.post('/auth/logout/');
+      return response.data;
+    } finally {
+      setAuthenticated(false);
+    }
+  },
+
+  /**
+   * 获取当前登录用户信息
+   * @returns {Promise<{id, username, email, date_joined, profile: {phone, avatar, bio}}>}
+   */
   async getCurrentUser() {
-    const response = await api.get('/auth/me/');
-    return response.data;
+    try {
+      const response = await api.get('/auth/me/');
+      setAuthenticated(true);
+      return response.data;
+    } catch (err) {
+      setAuthenticated(false);
+      throw err;
+    }
   },
 
   /**
@@ -55,15 +76,17 @@ export const authService = {
   async checkAuth() {
     try {
       const response = await api.get('/auth/check/');
+      setAuthenticated(true);
       return response.data;
     } catch {
+      setAuthenticated(false);
       return { is_authenticated: false, user: null };
     }
   },
 
   /**
    * 更新用户资料
-   * @param {object} data
+   * @param {object} data - { email?, profile?: { phone?, bio?, avatar? } }
    * @returns {Promise<object>}
    */
   async updateProfile(data) {
@@ -72,21 +95,21 @@ export const authService = {
   },
 
   /**
-   * 删除账号
+   * 删除账号（服务端删除用户并清除 Cookie）
    * @returns {Promise<object>}
    */
   async deleteAccount() {
     const response = await api.delete('/auth/delete/');
-    this.logout();
+    setAuthenticated(false);
     return response.data;
   },
 
   /**
-   * 判断是否已登录
+   * 判断是否已登录（内存标记，避免 localStorage 存储任何 token）
    * @returns {boolean}
    */
   isAuthenticated() {
-    return !!localStorage.getItem('access_token');
+    return _authenticated;
   },
 };
 

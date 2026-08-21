@@ -1,6 +1,7 @@
 from django.apps import AppConfig
 
 
-class CommentConfig(AppConfig):
+class CoreConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'comment'
+    name = 'core'
+    verbose_name = '共享内核'

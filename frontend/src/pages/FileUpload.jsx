@@ -1,68 +1,105 @@
-import { useState } from 'react'
-import axios from 'axios'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  Button, Card, Progress, Select, Space, Typography, Upload, message,
+} from 'antd'
+import { ArrowLeftOutlined, InboxOutlined } from '@ant-design/icons'
+import api from '../services/api'
+import { computeUploadProgress, formatEta, formatSpeed } from '../utils/uploadProgress'
+
+const { Title, Text } = Typography
+const { Dragger } = Upload
 
 function FileUpload() {
   const navigate = useNavigate()
-  const [file, setFile] = useState(null)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [folders, setFolders] = useState([])
+  const [folderId, setFolderId] = useState(undefined)
+  const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState({ percent: 0, speed: 0, eta: 0 })
+  const samples = useRef([])
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0])
-  }
+  // 载入顶层文件夹供选择（不支持嵌套选择，嵌套上传请进入云盘对应文件夹后使用快速上传）
+  useEffect(() => {
+    api.get('/folders/')
+      .then((res) => setFolders(res.data))
+      .catch(() => {})
+  }, [])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!file) {
-      setError('Please select a file')
-      return
-    }
-
+  const handleUpload = useCallback(async ({ file, onSuccess, onError }) => {
     const formData = new FormData()
     formData.append('file', file)
+    if (folderId) formData.append('folder', folderId)
+
+    samples.current = []
+    setUploading(true)
+    setProgress({ percent: 0, speed: 0, eta: 0 })
 
     try {
-      setLoading(true)
-      await axios.post('http://localhost:8000/file_up/file_upload/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      await api.post('/files/upload/', formData, {
+        onUploadProgress: (event) => setProgress(computeUploadProgress(event, samples)),
       })
-      setSuccess('File uploaded successfully!')
-      setTimeout(() => {
-        navigate('/file_up/file_list')
-      }, 1500)
+      message.success(`「${file.name}」上传成功`)
+      setProgress((prev) => ({ ...prev, percent: 100 }))
+      onSuccess?.()
+      navigate('/file_up/file_list')
     } catch (err) {
-      setError('Failed to upload file')
-      console.error(err)
+      message.error(err.response?.data?.message || `「${file.name}」上传失败`)
+      onError?.(err)
     } finally {
-      setLoading(false)
+      setUploading(false)
     }
-  }
+  }, [folderId, navigate])
 
   return (
-    <div className="container">
-      <h1>Upload File</h1>
-      {success && <div className="alert alert-success">{success}</div>}
-      {error && <div className="alert alert-danger">{error}</div>}
-      <form onSubmit={handleSubmit} className="card">
-        <div className="form-group">
-          <label htmlFor="file">Select File</label>
-          <input
-            type="file"
-            id="file"
-            name="file"
-            className="form-control"
-            onChange={handleFileChange}
-            required
-          />
-        </div>
-        <button type="submit" className="btn" disabled={loading}>
-          {loading ? 'Uploading...' : 'Upload'}
-        </button>
-      </form>
+    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      <Button
+        type="link"
+        icon={<ArrowLeftOutlined />}
+        style={{ padding: 0, marginBottom: 16 }}
+        onClick={() => navigate('/file_up/file_list')}
+      >
+        返回云盘
+      </Button>
+      <Title level={3}>上传文件</Title>
+      <Text type="secondary">上传到云盘，单个文件最大 2GB</Text>
+
+      <Card style={{ marginTop: 16, borderRadius: 8 }}>
+        <Space direction="vertical" style={{ width: '100%' }} size={16}>
+          <div>
+            <Text strong>目标文件夹</Text>
+            <Select
+              style={{ width: '100%', marginTop: 8 }}
+              placeholder="根目录"
+              allowClear
+              value={folderId}
+              onChange={setFolderId}
+              options={folders.map((f) => ({ label: f.name, value: f.id }))}
+            />
+          </div>
+
+          <Dragger
+            multiple={false}
+            disabled={uploading}
+            showUploadList={false}
+            customRequest={handleUpload}
+          >
+            <p className="ant-upload-drag-icon">
+              <InboxOutlined style={{ color: '#6f42c1' }} />
+            </p>
+            <p className="ant-upload-text">点击或拖拽文件到此处上传</p>
+            <p className="ant-upload-hint">支持大文件流式上传，将上传到所选文件夹</p>
+          </Dragger>
+
+          {uploading && (
+            <div>
+              <Progress percent={progress.percent} />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {formatSpeed(progress.speed)} · 剩余 {formatEta(progress.eta)}
+              </Text>
+            </div>
+          )}
+        </Space>
+      </Card>
     </div>
   )
 }

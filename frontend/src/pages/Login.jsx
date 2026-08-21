@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Form, Input, Button, Card, message, Typography, Divider } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
-import api from '../services/api'
 import { useAuth } from '../store/authStore'
 
 const { Title, Text } = Typography
@@ -19,7 +18,11 @@ function Login() {
       message.success('登录成功！')
       navigate('/')
     } catch (err) {
-      const errMsg = err.response?.data?.detail || '账号或密码有误，请重新输入'
+      const data = err.response?.data
+      const errMsg =
+        data?.details?.non_field_errors?.[0] ||
+        data?.message ||
+        '账号或密码有误，请重新输入'
       message.error(errMsg)
     } finally {
       setLoading(false)

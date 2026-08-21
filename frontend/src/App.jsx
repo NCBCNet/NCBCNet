@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { Layout, Menu, Dropdown, Avatar, Spin, Button, Modal, message } from 'antd'
 import {
@@ -15,17 +16,23 @@ import {
 } from '@ant-design/icons'
 import './App.css'
 import { useAuth } from './store/authStore'
-import Home from './pages/Home'
-import ArticleList from './pages/ArticleList'
-import ArticleDetail from './pages/ArticleDetail'
-import ArticleCreate from './pages/ArticleCreate'
-import ArticleEdit from './pages/ArticleEdit'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import FileList from './pages/FileList'
-import FileUpload from './pages/FileUpload'
-import Profile from './pages/Profile'
-import About from './pages/About'
+import ErrorBoundary from './components/ErrorBoundary'
+
+// 路由级代码分割（React.lazy + Suspense），降低首屏包体积
+const Home = lazy(() => import('./pages/Home'))
+const ArticleList = lazy(() => import('./pages/ArticleList'))
+const ArticleDetail = lazy(() => import('./pages/ArticleDetail'))
+const ArticleCreate = lazy(() => import('./pages/ArticleCreate'))
+const ArticleEdit = lazy(() => import('./pages/ArticleEdit'))
+const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
+const FileList = lazy(() => import('./pages/FileList'))
+const FileUpload = lazy(() => import('./pages/FileUpload'))
+const Profile = lazy(() => import('./pages/Profile'))
+const About = lazy(() => import('./pages/About'))
+const NotFound = lazy(() => import('./pages/NotFound'))
+const Forbidden = lazy(() => import('./pages/Forbidden'))
+const ServerError = lazy(() => import('./pages/ServerError'))
 
 const { Header, Content, Footer } = Layout
 
@@ -166,19 +173,33 @@ function App() {
         </div>
       </Header>
       <Content className="app-content">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/article" element={<ArticleList />} />
-          <Route path="/article/article_detail/:id" element={<ArticleDetail />} />
-          <Route path="/article/article_create" element={<ArticleCreate />} />
-          <Route path="/article/article_edit/:id" element={<ArticleEdit />} />
-          <Route path="/usermanage/login" element={<Login />} />
-          <Route path="/usermanage/register" element={<Register />} />
-          <Route path="/file_up/file_list" element={<FileList />} />
-          <Route path="/file_up/file_upload" element={<FileUpload />} />
-          <Route path="/usermanage/profile/:id" element={<Profile />} />
-          <Route path="/server/about" element={<About />} />
-        </Routes>
+        <ErrorBoundary>
+          <Suspense
+            fallback={
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+                <Spin size="large" />
+              </div>
+            }
+          >
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/article" element={<ArticleList />} />
+              <Route path="/article/article_detail/:id" element={<ArticleDetail />} />
+              <Route path="/article/article_create" element={<ArticleCreate />} />
+              <Route path="/article/article_edit/:id" element={<ArticleEdit />} />
+              <Route path="/usermanage/login" element={<Login />} />
+              <Route path="/usermanage/register" element={<Register />} />
+              <Route path="/file_up/file_list" element={<FileList />} />
+              <Route path="/file_up/file_upload" element={<FileUpload />} />
+              <Route path="/usermanage/profile/:id" element={<Profile />} />
+              <Route path="/server/about" element={<About />} />
+              <Route path="/403" element={<Forbidden />} />
+              <Route path="/500" element={<ServerError />} />
+              <Route path="/404" element={<NotFound />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </Content>
       <Footer className="app-footer">
         Copyright &copy; www.ncbcstudent.top 2024-2026 v0.5.8.0

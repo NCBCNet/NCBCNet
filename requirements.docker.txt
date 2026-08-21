@@ -1,4 +1,4 @@
-﻿aiofiles==25.1.0
+aiofiles==25.1.0
 annotated-types==0.7.0
 anyio==4.6.2.post1
 asgiref==3.11.1
@@ -10,20 +10,16 @@ cachetools==5.5.0
 cbor2==5.8.0
 certifi==2024.8.30
 cffi==2.0.0
-channels==4.3.2
 constantly==23.10.4
 cryptography==46.0.3
 daphne==4.2.1
 Django==6.0.2
 django-ckeditor-5==0.2.19
 django-classy-tags==4.1.0
-django-haystack==3.3.0
 django-js-asset==2.2.0
 django-mdeditor==0.1.20
 django-model-utils==5.0.0
 django-mptt==0.16.0
-django-notifications-hq==1.8.3
-django-ratelimit==4.1.0
 django-redis==6.0.0
 django-sekizai==4.1.0
 django-simpleui==2024.8.28
@@ -78,3 +74,9 @@ djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1
 fakeredis==2.32.0
 PyMySQL==1.1.1
+
+# 前后端分离 / 安全 / 模块化 新增
+drf-spectacular==0.30.0
+django-storages==1.14.5
+rq==2.4.1
+import-linter==2.2

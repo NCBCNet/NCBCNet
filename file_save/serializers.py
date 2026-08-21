@@ -1,5 +1,11 @@
+"""file_save 序列化器（从 api/serializers/files.py 迁移，类名与字段保持不变）。
+
+ORM 写入收敛到 file_save.services（create_folder / upload_file）。
+"""
 from rest_framework import serializers
+
 from file_save.models import Folder, UploadedFile
+from file_save.services import create_folder, upload_file
 
 
 class FolderSerializer(serializers.ModelSerializer):
@@ -13,6 +19,13 @@ class FolderSerializer(serializers.ModelSerializer):
 
     def get_has_children(self, obj):
         return obj.subfolders.exists()
+
+    def create(self, validated_data):
+        return create_folder(
+            user=validated_data.pop('owner'),
+            name=validated_data['name'],
+            parent=validated_data.get('parent'),
+        )
 
 
 class FileSerializer(serializers.ModelSerializer):
@@ -44,3 +57,12 @@ class FileUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadedFile
         fields = ['file', 'folder']
+
+    def create(self, validated_data):
+        return upload_file(
+            user=validated_data.pop('owner'),
+            file_obj=validated_data.pop('file'),
+            folder=validated_data.pop('folder', None),
+            original_name=validated_data.pop('original_name', None),
+            file_size=validated_data.pop('file_size', 0),
+        )

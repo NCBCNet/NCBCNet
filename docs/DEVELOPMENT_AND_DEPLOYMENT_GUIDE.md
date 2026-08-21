@@ -1,119 +1,52 @@
 # NCBCNet 开发与部署说明
 
+> 关联：`ARCHITECTURE_ROADMAP.md`（架构路线）、`FRONTEND_MIGRATION_PLAN.md`（前端计划）、`SECURITY.md`（安全模型）。
+
 ## 1. 总体原则
 
-当前项目分成两条完全不同的路径：
-
-1. **本地开发**：直接在宿主机运行 Django 和 Vite，不使用 Docker。
-2. **生产部署**：使用 Docker 镜像和 Compose 部署，Nginx 负责 HTTPS，Daphne 只提供内网 HTTP。
-
-这样做的目标是让开发更快、排障更简单，同时让部署更标准。
+1. **本地开发**：宿主机直跑 Django + Vite，不使用 Docker。
+2. **生产部署**：单机 Docker Compose，Nginx 终止 TLS 并直接服务 SPA 静态产物；Daphne 只提供内网 HTTP。
+3. **前后端分离**：前端是纯 SPA（React + AntD），后端只暴露 `/api/v1/` 与 `/admin/`。
 
 ---
 
 ## 2. 本地开发工作流
 
-### 2.1 需要的组件
-
-本地开发时建议准备：
+### 2.1 组件
 
 | 组件 | 作用 |
 | --- | --- |
-| Python 3.12 | 运行 Django 后端 |
-| Node.js 20+ | 运行 Vite 前端 |
+| Python 3.12 | Django 后端 |
+| Node.js 20+ | Vite 前端 |
 | MySQL 8 | 业务数据库 |
-| Redis 7 | 缓存、会话 |
-
-> 开发阶段不需要 Docker。数据库和 Redis 直接安装在本机即可，或者使用你自己的本机服务管理方式。
+| Redis 7 | 缓存 / 会话 / 队列 |
 
 ### 2.2 首次准备
 
-1. 复制环境变量模板：
-
 ```bash
-cp .env.example .env
-```
-
-2. 按本地环境修改 `.env`：
-
-```env
-DEBUG=true
-APP_ENV=development
-DB_ENGINE=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=ncnetdb
-DB_USER=ncnet
-DB_PASSWORD=your_db_password
-REDIS_URL=redis://127.0.0.1:6379/1
-ALLOWED_HOSTS=127.0.0.1,localhost
-CSRF_TRUSTED_ORIGINS=http://127.0.0.1,http://localhost
-ENABLE_HTTPS_REDIRECT=false
-```
-
-3. 安装 Python 依赖：
-
-```bash
+cp .env.example .env     # 按需修改 DB / 主机白名单
 pip install -r requirements.txt
+cd frontend && npm install && cd ..
 ```
 
-4. 安装前端依赖：
-
-```bash
-cd frontend
-npm install
-```
-
-### 2.3 启动顺序
-
-建议顺序如下：
-
-1. 启动 MySQL
-2. 启动 Redis
-3. 启动 Django 后端
-4. 启动 Vite 前端
-
-### 2.4 后端启动
-
-在项目根目录执行：
+### 2.3 启动
 
 ```bash
 python manage.py migrate
 python manage.py runserver 0.0.0.0:8000
+
+cd frontend && npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
-后端默认监听：
+前端 `http://localhost:5173`，后端 `http://localhost:8000`。Vite 代理 `/api`、`/media`、`/static` 到后端。
 
-- `http://127.0.0.1:8000`
+### 2.4 认证与 CSRF（重要）
 
-### 2.5 前端启动
+- 认证为 **HttpOnly Cookie JWT**（`nc_access` / `nc_refresh`），前端不存 token。
+- 写请求必须携带 `X-CSRFToken`（取自 `csrftoken` Cookie，前端挂载时调用 `GET /api/v1/auth/csrf/` 获取）。
+- 开发环境 `CSRF_TRUSTED_ORIGINS` 需包含 Vite 来源（如 `http://localhost:5173`，见 `.env.example`）。
 
-进入 `frontend/` 后执行：
-
-```bash
-npm run dev -- --host 0.0.0.0 --port 5173
-```
-
-前端默认监听：
-
-- `http://127.0.0.1:5173`
-
-### 2.6 前后端联调
-
-前端通过 Vite 代理访问后端 API。  
-如果你的后端运行在本地 `8000` 端口，默认代理目标就是：
-
-```text
-http://127.0.0.1:8000
-```
-
-如果你改了后端端口，可以设置：
-
-```env
-VITE_PROXY_TARGET=http://127.0.0.1:8000
-```
-
-### 2.7 常用开发命令
+### 2.5 常用命令
 
 ```bash
 python manage.py makemigrations
@@ -122,37 +55,26 @@ python manage.py test --settings=NCBCNet.test_settings
 cd frontend && npm run build
 ```
 
-### 2.8 本地开发注意事项
-
-1. 本地开发不使用 Nginx。
-2. 本地开发不使用 Docker。
-3. 本地开发不需要构建镜像。
-4. 生产相关的 TLS、证书挂载、镜像推送，仅在部署阶段使用。
-
 ---
 
 ## 3. 生产部署工作流
 
-### 3.1 使用场景
+### 3.1 架构
 
-生产环境使用：
-
-- Docker 镜像
-- Docker Compose
-- Nginx TLS
-- Daphne 内网 HTTP
+```text
+浏览器 ──HTTPS──> Nginx(SPA 静态 + TLS 终止 + /api 反代)
+                    ├─ /assets/ /  → frontend/dist（镜像内置）
+                    ├─ /api/ /admin/ /mdeditor/ /ckeditor5/ → web:8000 (Daphne)
+                    └─ /static/ /media/ → 命名卷
+web:8000 ──> MySQL、Redis
+worker ──> Redis 队列（RQ）
+```
 
 ### 3.2 部署前准备
 
-1. 准备 `.env`
-2. 准备证书文件：
-
-```text
-./certs/ncnetstudent.top.pem
-./certs/ncnetstudent.top.key
-```
-
-3. 确保数据库、Redis 配置正确
+1. 准备 `.env`（从 `.env.example` 复制）。
+2. 准备证书目录：`./certs/ncnetstudent.top.pem` 与 `./certs/ncnetstudent.top.key`。
+3. 确保 `SECRET` 文件存在（Django `SECRET_KEY`，挂载到 `/app/SECRET`）。
 
 ### 3.3 启动部署
 
@@ -160,66 +82,90 @@ cd frontend && npm run build
 docker compose up -d --build
 ```
 
-### 3.4 服务职责
+服务：`nginx`（80/443）、`web`（Daphne 内网）、`db`（MySQL）、`redis`、`worker`（RQ，可选）。
 
-| 服务 | 职责 |
-| --- | --- |
-| nginx | 对外 HTTPS 入口、反代、静态文件 |
-| web | Django ASGI 应用 |
-| db | MySQL |
-| redis | 缓存与会话 |
+- `web` 与 `nginx` 均为多阶段构建产物：`web` 用根 `Dockerfile`，`nginx` 用 `docker/nginx.Dockerfile`（构建期 `npm ci && npm run build`，运行时镜像自带 SPA）。
+- `web` 通过 `/api/v1/health/` 健康检查；`nginx` 依赖 `web` 健康后才启动。
+- `worker` 与 `web` 同一镜像，`command: rq worker --with-scheduler`；不跑 migrate/collectstatic。
 
-### 3.5 生产请求链路
-
-```text
-浏览器 -> Nginx(HTTPS) -> Daphne(HTTP) -> Django
-```
-
-静态文件和媒体文件都由 Nginx 直接读取挂载卷。
-
----
-
-## 4. 镜像与 CI/CD
-
-### 4.1 镜像构建
+### 3.4 镜像与 CI/CD
 
 ```bash
 docker build -t ncbcnet-web:latest .
+docker build -f docker/nginx.Dockerfile -t ncbcnet-nginx:latest .
 ```
 
-如果 Docker Hub 拉取慢或受限，可以覆盖基础镜像：
-
-```bash
-docker build --build-arg PYTHON_BASE_IMAGE=m.daocloud.io/docker.io/library/python:3.12-slim -t ncbcnet-web:latest .
-```
-
-### 4.2 GitHub Actions
-
-CI 流程包含：
-
-1. 后端测试
-2. 前端构建
-3. push 后构建并推送 GHCR 镜像
+GitHub Actions 流程：后端测试 + `lint-imports`（架构边界）→ 前端构建 → push 后构建并推送两个镜像到 GHCR（`ncbcnet-web`、`ncbcnet-nginx`）。
 
 ---
 
-## 5. 目录与文件说明
+## 4. 对象存储（阶段三，可选）
+
+生产建议把媒体迁到 S3 兼容对象存储（MinIO / 阿里云 OSS / 腾讯云 COS），解除“文件绑死单机”。
+
+1. 在 `.env` 配置：
+   ```env
+   OSS_ENDPOINT_URL=https://oss-cn-xxx.aliyuncs.com
+   OSS_ACCESS_KEY_ID=...
+   OSS_SECRET_ACCESS_KEY=...
+   OSS_BUCKET=ncbcnet-media
+   OSS_QUERYSTRING_AUTH=true
+   ```
+2. 迁移存量文件（先 `--dry-run`，分批，校验通过后再 `--delete-local`）：
+   ```bash
+   docker compose exec web python manage.py migrate_media_to_oss --dry-run
+   docker compose exec web python manage.py migrate_media_to_oss
+   ```
+3. 私有下载在阶段三改为对象存储签名 URL；未迁移前走本地签名下载端点。
+
+---
+
+## 5. 备份与恢复
+
+### 5.1 备份
+
+`deploy/backup.sh`（建议 cron / systemd timer 每日执行）：MySQL `mysqldump | gzip` + 媒体卷 `tar`，可上传对象存储，按保留天数清理。
+
+```bash
+# 环境变量：DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD
+./deploy/backup.sh
+```
+
+备份矩阵见 `ARCHITECTURE_ROADMAP.md` 6.6（MySQL 托管自动备份 + 每周额外 dump、媒体 OSS 版本控制、Redis 快照、密钥离线备份）。
+
+### 5.2 恢复
+
+1. 数据库：`gunzip db_xxx.sql.gz | mysql -h ... -u ... -p ... <db>`
+2. 媒体：`tar -xzf media_xxx.tar.gz -C <MEDIA_ROOT>`
+3. 建议季度演练一次恢复流程。
+
+---
+
+## 6. 安全清单（部署前核对）
+
+- [ ] `DEBUG=false`、`APP_ENV=production`
+- [ ] `ALLOWED_HOSTS`、`CSRF_TRUSTED_ORIGINS` 为真实域名白名单
+- [ ] `DJANGO_SECRET_KEY` 为随机密钥（非默认值）
+- [ ] `ENABLE_HTTPS_REDIRECT=true`、`AUTH_COOKIE_SECURE=true`
+- [ ] 证书已就位且 `nginx.conf` 的 `server_name` 正确
+- [ ] `.env` / `SECRET` 未提交到仓库
+- [ ] 数据库 `DB_PASSWORD` 非默认值；对象存储使用私有读 + 签名访问
+- [ ] 已执行过 `deploy/backup.sh` 并验证可恢复
+
+---
+
+## 7. 目录与文件说明
 
 | 文件 | 作用 |
 | --- | --- |
-| `docker-compose.dev.yml` | 旧式容器开发方案，当前推荐不作为日常开发入口 |
-| `docker-compose.yml` | 生产部署方案 |
-| `Dockerfile` | 生产镜像构建文件 |
-| `docker/entrypoint.sh` | 容器启动初始化脚本 |
-| `requirements.docker.txt` | 镜像/CI 专用依赖 |
-| `README.md` | 中文入口说明 |
-
----
-
-## 6. 推荐实践
-
-1. 本地调试优先走宿主机直跑。
-2. 只在部署时使用镜像。
-3. 把数据库、Redis、证书、域名、缓存地址全部放进环境变量。
-4. 生产环境只保留 Nginx 对外暴露。
-
+| `docker-compose.yml` | 生产部署（nginx/web/db/redis/worker） |
+| `Dockerfile` | web 镜像 |
+| `docker/nginx.Dockerfile` | nginx + SPA 镜像（多阶段） |
+| `docker/entrypoint.sh` | 容器启动初始化（migrate/collectstatic） |
+| `nginx/nginx.conf` | TLS 终止、SPA 静态、/api 反代、CSP |
+| `deploy/backup.sh` | 备份脚本 |
+| `core/tasks.py` | RQ 后台任务模块 |
+| `file_save/management/commands/migrate_media_to_oss.py` | 媒体迁移命令 |
+| `requirements.docker.txt` | 镜像 / CI 依赖 |
+| `.env.example` | 环境变量模板 |
+| `SECURITY.md` | 安全模型与漏洞报告 |

@@ -78,7 +78,6 @@ SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', ENABLE_HTTPS_REDIRECT)
 INSTALLED_APPS = [
     "daphne",
     "rest_framework",
-    'corsheaders',
     'simpleui',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -86,31 +85,37 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core',
     'server',
     'article',
     'study',
     'file_save',
     'usermanage',
-    'comment',
     'taggit',
     'mptt',
     'django_ckeditor_5',
     # 'notifications',
     'mdeditor',
-    'django_ratelimit',
     'api',
 ]
 
+# OpenAPI 文档（drf-spectacular，可选依赖；未安装时自动跳过）
+try:
+    import drf_spectacular  # noqa: F401
+    INSTALLED_APPS.append('drf_spectacular')
+except ImportError:
+    pass
+
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'api.middleware.CookieAuthCsrfMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.csp.ContentSecurityPolicyMiddleware'
+    'django.middleware.csp.ContentSecurityPolicyMiddleware',
 ]
 
 if DEBUG:
@@ -124,7 +129,7 @@ ROOT_URLCONF = 'NCBCNet.urls'
 # Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'api.authentication.CookieJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
@@ -132,6 +137,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
     'DATETIME_FORMAT': '%Y-%m-%d %H:%M:%S',
+    'EXCEPTION_HANDLER': 'api.exceptions.custom_exception_handler',
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '5/min',
+        'register': '3/min',
+        'upload': '30/min',
+    },
 }
 
 # Simple JWT Configuration
@@ -144,6 +155,19 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
 }
+
+# HttpOnly Cookie JWT 认证（ADR-003 中期方案）
+# access/refresh token 存于 HttpOnly Cookie，前端 JS 无法读取，规避 XSS 窃取。
+AUTH_COOKIE_ACCESS = 'nc_access'
+AUTH_COOKIE_REFRESH = 'nc_refresh'
+AUTH_COOKIE_SECURE = env_bool('AUTH_COOKIE_SECURE', ENABLE_HTTPS_REDIRECT)
+AUTH_COOKIE_SAMESITE = os.getenv('AUTH_COOKIE_SAMESITE', 'Lax')
+AUTH_COOKIE_PATH = '/'
+# refresh Cookie 仅发送到认证相关端点，降低暴露面
+AUTH_REFRESH_COOKIE_PATH = '/api/v1/auth/'
+
+# 签名下载链接有效期（秒）
+DOWNLOAD_LINK_TTL = int(os.getenv('DOWNLOAD_LINK_TTL', '300'))
 
 TEMPLATES = [
     {
@@ -319,26 +343,29 @@ LOGGING = {
         },
     },
     'handlers': {
+        # 生产日志写 stdout，由 Docker logging driver 收集（ARCHITECTURE_ROADMAP 6.7）
         'console': {
             'level': 'INFO',
-            'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
+        # 仅 DEBUG 下写文件，生产不落容器内文件
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': logfile_path,
             'formatter': 'verbose',
+            'filters': ['require_debug_true'],
         },
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
+            'level': 'INFO',
             'propagate': True,
         },
         'django.request': {
-            'handlers': ['file'],
+            'handlers': ['console', 'file'],
             'level': 'INFO',
             'propagate': False,
         },
@@ -375,17 +402,43 @@ MEDIA_ROOT = os.getenv('MEDIA_ROOT', os.path.join(BASE_DIR, "mediafiles/"))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
-# CORS 配置
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
+# CORS：同源部署（Nginx 服务 SPA 并反代 /api），前端经 Vite 代理访问后端，
+# 无跨域请求，故不引入 django-cors-headers；浏览器默认同源策略即为最安全的“白名单”。
+
+# Content Security Policy（Django 5.1+/6.0 内建中间件，作用于 /admin 与旧模板页面；
+# SPA 的 CSP 由 Nginx 下发，见 nginx/nginx.conf）。
+SECURE_CSP = {
+    "default-src": ("'self'",),
+    "script-src": ("'self'", "'unsafe-inline'", "'unsafe-eval'"),
+    "style-src": ("'self'", "'unsafe-inline'"),
+    "img-src": ("'self'", "data:", "blob:"),
+    "font-src": ("'self'", "data:"),
+    "connect-src": ("'self'",),
+    "frame-src": ("'self'",),
+    "frame-ancestors": ("'self'",),
+    "object-src": ("'none'",),
+}
+
+# OpenAPI 文档（drf-spectacular，可选依赖）
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'NCBCNet API',
+    'DESCRIPTION': '南城网前后端分离 REST API（/api/v1/）',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
+# 对象存储（阶段三，S3 兼容：MinIO / 阿里云 OSS / 腾讯云 COS）。
+# 未配置 OSS_ENDPOINT_URL 时使用本地磁盘存储，保证开发与现有部署不变。
+DEFAULT_FILE_STORAGE = os.getenv(
+    'DEFAULT_FILE_STORAGE',
+    'django.core.files.storage.FileSystemStorage',
+)
+if os.getenv('OSS_ENDPOINT_URL'):
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3.S3Storage'
+AWS_ACCESS_KEY_ID = os.getenv('OSS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.getenv('OSS_SECRET_ACCESS_KEY', '')
+AWS_S3_ENDPOINT_URL = os.getenv('OSS_ENDPOINT_URL', '')
+AWS_STORAGE_BUCKET_NAME = os.getenv('OSS_BUCKET', '')
+AWS_QUERYSTRING_AUTH = env_bool('OSS_QUERYSTRING_AUTH', True)
+AWS_S3_FILE_OVERWRITE = env_bool('OSS_FILE_OVERWRITE', False)
+AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}

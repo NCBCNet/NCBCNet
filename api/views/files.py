@@ -1,11 +1,33 @@
+import hashlib
+import hmac
+import time
+
+from django.conf import settings
+from django.http import FileResponse
 from rest_framework import generics, permissions, status, parsers
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.shortcuts import get_object_or_404
-from django.http import Http404
 
-from file_save.models import Folder, UploadedFile
-from api.serializers.files import FolderSerializer, FileSerializer, FileUploadSerializer
+from file_save.serializers import FolderSerializer, FileSerializer, FileUploadSerializer
+from file_save.services import (
+    delete_file,
+    delete_folder,
+    get_downloadable_file,
+    get_file,
+    list_files,
+    list_folders,
+    list_shared_files,
+    toggle_share,
+)
+
+# 签名下载链接有效期（秒）
+DOWNLOAD_LINK_TTL = int(getattr(settings, 'DOWNLOAD_LINK_TTL', 300))
+
+
+def _sign_download(file_id, exp):
+    """用 SECRET_KEY 对 (file_id, exp) 生成 HMAC-SHA256 签名。"""
+    message = f"{file_id}:{exp}".encode('utf-8')
+    return hmac.new(settings.SECRET_KEY.encode('utf-8'), message, hashlib.sha256).hexdigest()
 
 
 class FolderListView(generics.ListCreateAPIView):
@@ -16,9 +38,7 @@ class FolderListView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         parent_id = self.request.query_params.get('parent')
-        if parent_id:
-            return Folder.objects.filter(owner=user, parent_id=parent_id)
-        return Folder.objects.filter(owner=user, parent=None)
+        return list_folders(user, parent_id=parent_id)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -28,12 +48,8 @@ class FolderDeleteView(generics.DestroyAPIView):
     """删除文件夹"""
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        return Folder.objects.filter(owner=self.request.user)
-
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.delete()
+        delete_folder(request.user, self.kwargs['pk'])
         return Response({'success': True, 'message': '文件夹已删除'})
 
 
@@ -49,11 +65,9 @@ class FileListView(generics.ListAPIView):
         # 获取共享文件
         shared = self.request.query_params.get('shared', '')
         if shared == 'true':
-            return UploadedFile.objects.filter(share=True).exclude(owner=user)
+            return list_files(user, shared=True)
 
-        if folder_id:
-            return UploadedFile.objects.filter(owner=user, folder_id=folder_id)
-        return UploadedFile.objects.filter(owner=user, folder=None)
+        return list_files(user, folder_id=folder_id)
 
 
 class FileUploadView(generics.CreateAPIView):
@@ -75,15 +89,8 @@ class FileDeleteView(generics.DestroyAPIView):
     """删除文件"""
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        return UploadedFile.objects.filter(owner=self.request.user)
-
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        # 删除物理文件
-        if instance.file:
-            instance.file.delete(save=False)
-        instance.delete()
+        delete_file(request.user, self.kwargs['pk'])
         return Response({'success': True, 'message': '文件已删除'})
 
 
@@ -92,17 +99,12 @@ class FileShareToggleView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
-        try:
-            file_instance = UploadedFile.objects.get(pk=pk, owner=request.user)
-            file_instance.share = not file_instance.share
-            file_instance.save(update_fields=['share'])
-            return Response({
-                'success': True,
-                'share': file_instance.share,
-                'message': '共享状态已更新'
-            })
-        except UploadedFile.DoesNotExist:
-            raise Http404('文件不存在')
+        file_instance = toggle_share(request.user, pk)
+        return Response({
+            'success': True,
+            'share': file_instance.share,
+            'message': '共享状态已更新'
+        })
 
 
 class SharedFileListView(generics.ListAPIView):
@@ -111,4 +113,73 @@ class SharedFileListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return UploadedFile.objects.filter(share=True).exclude(owner=self.request.user)
+        return list_shared_files(self.request.user)
+
+
+class FileDownloadUrlView(APIView):
+    """获取私有文件的签名下载链接（对象级授权：仅所有者或共享文件可见者）。"""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        # 对象级授权：所有者或共享文件（服务层校验）
+        file_instance = get_downloadable_file(request.user, pk)
+
+        exp = int(time.time()) + DOWNLOAD_LINK_TTL
+        token = _sign_download(pk, exp)
+        url = request.build_absolute_uri(f'/api/v1/files/{pk}/download/?exp={exp}&sig={token}')
+        return Response({'url': url, 'expires_in': DOWNLOAD_LINK_TTL})
+
+
+class FileDownloadView(APIView):
+    """签名校验通过后流式下载文件。
+
+    下载链接本身即授权凭证（HMAC 签名 + 过期时间），故无需 Cookie/登录态，
+    支持前端用普通 <a href> 触发下载。
+    """
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk):
+        exp = request.query_params.get('exp')
+        sig = request.query_params.get('sig')
+
+        if not exp or not sig:
+            return Response(
+                {'code': 'invalid_link', 'message': '下载链接无效'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            exp = int(exp)
+        except (TypeError, ValueError):
+            return Response(
+                {'code': 'invalid_link', 'message': '下载链接无效'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if exp < int(time.time()):
+            return Response(
+                {'code': 'link_expired', 'message': '下载链接已过期'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not hmac.compare_digest(sig, _sign_download(pk, exp)):
+            return Response(
+                {'code': 'invalid_link', 'message': '下载链接无效'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        file_instance = get_file(pk)
+        try:
+            file_handle = file_instance.file.open('rb')
+        except Exception:
+            return Response(
+                {'code': 'not_found', 'message': '文件不存在或已被删除'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return FileResponse(
+            file_handle,
+            as_attachment=True,
+            filename=file_instance.original_name,
+            content_type='application/octet-stream',
+        )

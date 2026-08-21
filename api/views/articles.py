@@ -1,14 +1,20 @@
-from django.db.models import Q
+from django.http import Http404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from article.models import Article, ArticleColumn
-from api.serializers.articles import (
+from article.serializers import (
     ArticleListSerializer,
     ArticleDetailSerializer,
     ArticleCreateSerializer,
     ArticleColumnSerializer,
+)
+from article.services import (
+    delete_article,
+    get_article,
+    increase_likes,
+    list_articles,
+    list_columns,
 )
 
 
@@ -18,49 +24,21 @@ class ArticleListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        queryset = Article.objects.all()
-
-        # 搜索
-        search = self.request.query_params.get('search', '')
-        if search:
-            queryset = queryset.filter(
-                Q(title__icontains=search) |
-                Q(content__icontains=search)
-            )
-
-        # 栏目筛选
-        column = self.request.query_params.get('column', '')
-        if column and column.isdigit():
-            queryset = queryset.filter(column_id=column)
-
-        # 标签筛选
-        tag = self.request.query_params.get('tag', '')
-        if tag and tag != 'None':
-            queryset = queryset.filter(tags__name__in=[tag])
-
-        # 排序
-        order = self.request.query_params.get('order', '')
-        if order == 'total_views':
-            queryset = queryset.order_by('-total_views')
-        else:
-            queryset = queryset.order_by('-created')
-
-        return queryset
+        return list_articles(
+            search=self.request.query_params.get('search', ''),
+            column=self.request.query_params.get('column', ''),
+            tag=self.request.query_params.get('tag', ''),
+            order=self.request.query_params.get('order', ''),
+        )
 
 
 class ArticleDetailView(generics.RetrieveAPIView):
-    """文章详情"""
-    queryset = Article.objects.all()
+    """文章详情（阅读时增加浏览量）"""
     serializer_class = ArticleDetailSerializer
     permission_classes = [permissions.AllowAny]
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        # 增加浏览量
-        instance.total_views += 1
-        instance.save(update_fields=['total_views'])
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+    def get_object(self):
+        return get_article(self.kwargs['pk'], increase_views=True)
 
 
 class ArticleCreateView(generics.CreateAPIView):
@@ -78,7 +56,7 @@ class ArticleUpdateView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Article.objects.filter(author=self.request.user)
+        return list_articles().filter(author=self.request.user)
 
 
 class ArticleDeleteView(generics.DestroyAPIView):
@@ -86,11 +64,11 @@ class ArticleDeleteView(generics.DestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Article.objects.filter(author=self.request.user)
+        return list_articles().filter(author=self.request.user)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.delete()
+        delete_article(instance)
         return Response({'success': True, 'message': '文章已删除'}, status=status.HTTP_200_OK)
 
 
@@ -100,16 +78,14 @@ class IncreaseLikesView(APIView):
 
     def post(self, request, pk):
         try:
-            article = Article.objects.get(pk=pk)
-            article.likes += 1
-            article.save(update_fields=['likes'])
+            article = increase_likes(pk)
             return Response({'success': True, 'likes': article.likes})
-        except Article.DoesNotExist:
+        except Http404:
             return Response({'error': '文章不存在'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class ArticleColumnListView(generics.ListAPIView):
     """栏目列表"""
-    queryset = ArticleColumn.objects.all()
+    queryset = list_columns()
     serializer_class = ArticleColumnSerializer
     permission_classes = [permissions.AllowAny]
