@@ -12,51 +12,93 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 from datetime import datetime
-from daphne.apps import DaphneConfig
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-file_path = 'SECRET'
+
+
+def env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() in ('1', 'true', 'yes', 'on')
+
+
+def env_list(name, default=''):
+    value = os.getenv(name, default)
+    return [item.strip() for item in value.split(',') if item.strip()]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-with open(file_path, 'r') as f:
-    file_content =f.read()
-    SECRET_KEY = file_content
+secret_key_from_env = os.getenv('DJANGO_SECRET_KEY') or os.getenv('SECRET_KEY')
+if secret_key_from_env:
+    SECRET_KEY = secret_key_from_env
+else:
+    secret_file = Path(os.getenv('DJANGO_SECRET_FILE', BASE_DIR / 'SECRET'))
+    if secret_file.exists():
+        SECRET_KEY = secret_file.read_text(encoding='utf-8').strip()
+    else:
+        SECRET_KEY = 'django-insecure-dev-only-key-change-me'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-DAPHNEON_IN_DEBUG = False
-SQL_DEBUG = False
+APP_ENV = os.getenv('APP_ENV', 'development').lower()
+DEBUG = env_bool('DEBUG', APP_ENV != 'production')
+DAPHNEON_IN_DEBUG = env_bool('DAPHNEON_IN_DEBUG', DEBUG)
+SQL_DEBUG = env_bool('SQL_DEBUG', False)
 # 一定注意生产环境下将上面两个调为Flase！！！
 '''
 DEBUG Django 的默认调试选项
 DAPHNEON_IN_DEBUG 这个选项用于是否启用daphne专属静态文件托管、媒体文件调试路径与调试数据库
 SQL_DEBUG 是否在DEBUG下使用sql（WSL）
 '''
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '*')
+# CSRF 可信来源：开发环境(DEBUG=True)默认信任 Vite 代理来源，免去手动配置；
+# 生产(DEBUG=False)默认空，必须显式配置真实域名（https://你的域名）。
+# 显式设置 CSRF_TRUSTED_ORIGINS 环境变量时始终以环境变量为准。
+_default_csrf_origins = (
+    'http://localhost:5173,http://127.0.0.1:5173,'
+    'http://localhost:8000,http://127.0.0.1:8000'
+) if DEBUG else ''
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', _default_csrf_origins)
+
+# 生产环境关键配置校验：缺失/不安全时立即失败，避免带着开发默认值上线。
+# 开发(DEBUG=True)跳过本校验，零配置即可运行。
+if not DEBUG:
+    from django.core.exceptions import ImproperlyConfigured
+    if SECRET_KEY == 'django-insecure-dev-only-key-change-me':
+        raise ImproperlyConfigured(
+            '生产环境必须设置 DJANGO_SECRET_KEY（环境变量）或提供 SECRET 文件，'
+            '不能使用开发默认密钥。'
+        )
+    if '*' in ALLOWED_HOSTS or not ALLOWED_HOSTS:
+        raise ImproperlyConfigured(
+            '生产环境必须显式设置 ALLOWED_HOSTS，不允许通配符 *。'
+        )
 
 # Security Settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-CSRF_COOKIE_SECURE = True
+ENABLE_HTTPS_REDIRECT = env_bool('ENABLE_HTTPS_REDIRECT', not DEBUG)
 
-SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', ENABLE_HTTPS_REDIRECT)
 
-SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', ENABLE_HTTPS_REDIRECT)
+
+SECURE_SSL_REDIRECT = ENABLE_HTTPS_REDIRECT
 
 # HTTP Strict Transport Security (HSTS)
 # Start with a low value in production and increase once verified.
-SECURE_HSTS_SECONDS = 3600
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '3600' if ENABLE_HTTPS_REDIRECT else '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', ENABLE_HTTPS_REDIRECT)
+SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', ENABLE_HTTPS_REDIRECT)
 
 # Application definition
 
 INSTALLED_APPS = [
     "daphne",
+    "rest_framework",
     'simpleui',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -64,29 +106,37 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core',
     'server',
     'article',
     'study',
     'file_save',
     'usermanage',
-    'comment',
     'taggit',
     'mptt',
     'django_ckeditor_5',
     # 'notifications',
     'mdeditor',
-    'django_ratelimit'
+    'api',
 ]
+
+# OpenAPI 文档（drf-spectacular，可选依赖；未安装时自动跳过）
+try:
+    import drf_spectacular  # noqa: F401
+    INSTALLED_APPS.append('drf_spectacular')
+except ImportError:
+    pass
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'api.middleware.CookieAuthCsrfMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.csp.ContentSecurityPolicyMiddleware'
+    'django.middleware.csp.ContentSecurityPolicyMiddleware',
 ]
 
 if DEBUG:
@@ -96,6 +146,56 @@ if DAPHNEON_IN_DEBUG:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 ROOT_URLCONF = 'NCBCNet.urls'
+
+# Django REST Framework
+# DRF 渲染器：默认仅 JSON。Browsable API 仅当「开发环境(DEBUG)且显式设置 ENABLE_BROWSABLE_API=true」时启用，
+# 生产环境无论如何都不会启用，避免把 DRF 错误页暴露给用户。
+_DRF_RENDERERS = ['rest_framework.renderers.JSONRenderer']
+if DEBUG and env_bool('ENABLE_BROWSABLE_API', False):
+    _DRF_RENDERERS.append('rest_framework.renderers.BrowsableAPIRenderer')
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'api.authentication.CookieJWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+    ),
+    'DEFAULT_RENDERER_CLASSES': tuple(_DRF_RENDERERS),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+    'DATETIME_FORMAT': '%Y-%m-%d %H:%M:%S',
+    'EXCEPTION_HANDLER': 'api.exceptions.custom_exception_handler',
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '5/min',
+        'register': '3/min',
+        'upload': '30/min',
+    },
+}
+
+# Simple JWT Configuration
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+}
+
+# HttpOnly Cookie JWT 认证（ADR-003 中期方案）
+# access/refresh token 存于 HttpOnly Cookie，前端 JS 无法读取，规避 XSS 窃取。
+AUTH_COOKIE_ACCESS = 'nc_access'
+AUTH_COOKIE_REFRESH = 'nc_refresh'
+AUTH_COOKIE_SECURE = env_bool('AUTH_COOKIE_SECURE', ENABLE_HTTPS_REDIRECT)
+AUTH_COOKIE_SAMESITE = os.getenv('AUTH_COOKIE_SAMESITE', 'Lax')
+AUTH_COOKIE_PATH = '/'
+# refresh Cookie 仅发送到认证相关端点，降低暴露面
+AUTH_REFRESH_COOKIE_PATH = '/api/v1/auth/'
+
+# 签名下载链接有效期（秒）
+DOWNLOAD_LINK_TTL = int(os.getenv('DOWNLOAD_LINK_TTL', '300'))
 
 TEMPLATES = [
     {
@@ -189,51 +289,53 @@ WSGI_APPLICATION = 'NCBCNet.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-# 生产环境使用MySQL数据库，开发环境使用SQLite数据库
+# 生产环境使用PostgreSQL数据库，开发环境使用SQLite数据库
 
-if SQL_DEBUG:
+db_engine = os.getenv('DB_ENGINE', 'sqlite' if DEBUG else 'postgresql').lower()
+if SQL_DEBUG or db_engine == 'postgresql':
+    default_db_host = '127.0.0.1' if DEBUG else 'db'
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': "ncnetdb",
-            'USER': "ncnet",
-            'PASSWORD': "dbuserpassword",
-            'HOST': "127.0.0.1",
-            'PORT': "3306",
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'ncnetdb'),
+            'USER': os.getenv('DB_USER', 'ncnet'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'dbuserpassword'),
+            'HOST': os.getenv('DB_HOST', default_db_host),
+            'PORT': os.getenv('DB_PORT', '5432'),
         }
     }
 else:
-    if DEBUG or DAPHNEON_IN_DEBUG :
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-            }
-        }
-    else:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.mysql',
-                'NAME': "ncnetdb",
-                'USER': "ncnet",
-                'PASSWORD': "dbuserpassword",
-                'HOST': "127.0.0.1",
-                'PORT': "3306",
-            }
-        }
-# Redis 缓存配置
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1", # /1 表示使用 Redis 的 1 号数据库
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            # 如果 Redis 设置了密码，取消下面这行的注释
-            # "PASSWORD": "你的密码",
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.getenv('SQLITE_PATH', BASE_DIR / 'db.sqlite3'),
         }
     }
-}
-SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+# 缓存配置：
+# - 开发(DEBUG=True)且未显式指定 REDIS_URL：使用进程内缓存 LocMemCache，免装 Redis。
+# - 生产(DEBUG=False)：默认 redis://redis:6379/1（Compose 服务名），或用 REDIS_URL 覆盖。
+# - 任意环境显式设置 REDIS_URL 时，始终使用 Redis（如开发期要测试队列/共享缓存）。
+_redis_url = os.getenv('REDIS_URL')
+if DEBUG and not _redis_url:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "ncbcnet-dev-cache",
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": _redis_url or 'redis://redis:6379/1',
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                # 如果 Redis 设置了密码，取消下面这行的注释
+                # "PASSWORD": "你的密码",
+            }
+        }
+    }
+SESSION_ENGINE = os.getenv('SESSION_ENGINE', "django.contrib.sessions.backends.cache")
 SESSION_CACHE_ALIAS = "default"
 
 CONN_MAX_AGE = 60 * 60 * 1  # 数据库连接持续时间，单位为秒，这里设置为1小时
@@ -280,26 +382,29 @@ LOGGING = {
         },
     },
     'handlers': {
+        # 生产日志写 stdout，由 Docker logging driver 收集（ARCHITECTURE_ROADMAP 6.7）
         'console': {
             'level': 'INFO',
-            'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
+        # 仅 DEBUG 下写文件，生产不落容器内文件
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': logfile_path,
             'formatter': 'verbose',
+            'filters': ['require_debug_true'],
         },
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
+            'level': 'INFO',
             'propagate': True,
         },
         'django.request': {
-            'handlers': ['file'],
+            'handlers': ['console', 'file'],
             'level': 'INFO',
             'propagate': False,
         },
@@ -323,21 +428,56 @@ SIMPLEUI_ANALYSIS = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
-if DAPHNEON_IN_DEBUG:
-    staticfiles_path = os.path.join(BASE_DIR, "staticfiles/")
-    media_path = os.path.join(BASE_DIR, "media/")
-else:
-    staticfiles_path = "/usr/staticfiles/"
-    media_path = "/usr/mediafiles/"
-STATIC_ROOT = staticfiles_path
+STATIC_ROOT = os.getenv('STATIC_ROOT', os.path.join(BASE_DIR, "staticfiles/"))
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static/'),  # 添加此项
 ]
 MEDIA_URL = '/media/'
-MEDIA_ROOT = media_path
+MEDIA_ROOT = os.getenv('MEDIA_ROOT', os.path.join(BASE_DIR, "mediafiles/"))
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# CORS：同源部署（Nginx 服务 SPA 并反代 /api），前端经 Vite 代理访问后端，
+# 无跨域请求，故不引入 django-cors-headers；浏览器默认同源策略即为最安全的“白名单”。
+
+# Content Security Policy（Django 5.1+/6.0 内建中间件，作用于 /admin 与旧模板页面；
+# SPA 的 CSP 由 Nginx 下发，见 nginx/nginx.conf）。
+SECURE_CSP = {
+    "default-src": ("'self'",),
+    "script-src": ("'self'", "'unsafe-inline'", "'unsafe-eval'"),
+    "style-src": ("'self'", "'unsafe-inline'"),
+    "img-src": ("'self'", "data:", "blob:"),
+    "font-src": ("'self'", "data:"),
+    "connect-src": ("'self'",),
+    "frame-src": ("'self'",),
+    "frame-ancestors": ("'self'",),
+    "object-src": ("'none'",),
+}
+
+# OpenAPI 文档（drf-spectacular，可选依赖）
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'NCBCNet API',
+    'DESCRIPTION': '南城网前后端分离 REST API（/api/v1/）',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
+# 对象存储（阶段三，S3 兼容：MinIO / 阿里云 OSS / 腾讯云 COS）。
+# 未配置 OSS_ENDPOINT_URL 时使用本地磁盘存储，保证开发与现有部署不变。
+DEFAULT_FILE_STORAGE = os.getenv(
+    'DEFAULT_FILE_STORAGE',
+    'django.core.files.storage.FileSystemStorage',
+)
+if os.getenv('OSS_ENDPOINT_URL'):
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3.S3Storage'
+AWS_ACCESS_KEY_ID = os.getenv('OSS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.getenv('OSS_SECRET_ACCESS_KEY', '')
+AWS_S3_ENDPOINT_URL = os.getenv('OSS_ENDPOINT_URL', '')
+AWS_STORAGE_BUCKET_NAME = os.getenv('OSS_BUCKET', '')
+AWS_QUERYSTRING_AUTH = env_bool('OSS_QUERYSTRING_AUTH', True)
+AWS_S3_FILE_OVERWRITE = env_bool('OSS_FILE_OVERWRITE', False)
+AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}

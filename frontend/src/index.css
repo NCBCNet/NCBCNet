@@ -1,0 +1,52 @@
+/* NCBCNet 全局样式 - 配合 Ant Design */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Markdown 内容样式 */
+.article-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.article-content pre {
+  border-radius: 6px;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.article-content table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.article-content th,
+.article-content td {
+  border: 1px solid #e8e8e8;
+  padding: 8px 12px;
+}
+
+.article-content th {
+  background-color: #fafafa;
+  font-weight: 600;
+}

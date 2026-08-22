@@ -2,16 +2,14 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views import View
 
-from .models import Article, ArticleColumn
+from .models import Article, ArticleColumn, Comment
 import markdown
 from django.shortcuts import redirect
 from django.http import HttpResponse
-from .forms import ArticlePostForm
+from .forms import ArticlePostForm, CommentForm
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db.models import Q
-from comment.models import Comment
-from comment.forms import CommentForm
 
 # Create your views here.
 
@@ -143,3 +141,39 @@ class IncreaseLikesView(View):
         article.likes +=1
         article.save()
         return HttpResponse('success')
+
+
+@login_required(login_url='usermanage:login')
+def post_comment(request,article_id,parent_comment_id=None):
+    """旧 MVT 评论发表/回复（阶段一冻结链路；评论已并入 article 域）。
+
+    原 comment 应用删除后，本视图承接 /comment/ 前缀下的兼容路由
+    （见 article/comment_urls.py，namespace 仍为 comment）。
+    """
+    article = get_object_or_404(Article, id=article_id)
+    if request.method == "POST":
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.article = article
+            comment.user = request.user
+            if parent_comment_id:
+                parent_comment = Comment.objects.get(id=parent_comment_id)
+                comment.parent_id = parent_comment.get_root().id
+                comment.reply_to = parent_comment.user
+                comment.save()
+                return HttpResponse('200 OK')
+            comment.save()
+            return redirect(article)
+        else:
+            return HttpResponse("表单内容有误，请重新填写。")
+    elif request.method == "GET":
+        comment_form = CommentForm()
+        context = {
+            'comment_form': comment_form,
+            'article_id':article_id,
+            'parent_comment_id':parent_comment_id,
+        }
+        return render(request,'comment/reply.html',context)
+    else:
+        return redirect('server:illegal_request')

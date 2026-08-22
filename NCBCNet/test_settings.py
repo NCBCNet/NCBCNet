@@ -12,15 +12,19 @@ DATABASES = {
     }
 }
 
-# Use fakeredis for testing (compatible with django-ratelimit)
+# 使用进程内缓存（LocMemCache）供 DRF 限流测试使用，避免依赖外部 Redis。
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://localhost:6379/0',
-        'OPTIONS': {
-            'REDIS_CLIENT_CLASS': 'fakeredis.FakeRedis',
-        }
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'ncbcnet-tests',
     }
+}
+
+# 测试环境放宽限流（同一测试进程同 IP 会多次登录，避免 429）
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+    'login': '100/min',
+    'register': '100/min',
+    'upload': '1000/min',
 }
 
 # Use database-backed sessions for testing
@@ -55,6 +59,3 @@ class DisableMigrations:
         return None
 
 MIGRATION_MODULES = DisableMigrations()
-
-# Disable ratelimit for tests
-RATELIMIT_ENABLE = False

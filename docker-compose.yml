@@ -1,45 +1,129 @@
-version: '3.8'
-
 services:
   web:
     build:
       context: .
-    container_name: django-web
-    volumes:
-      - .:/app           # 挂载 Django 项目到容器
-      - static_data:/usr/staticfiles/  # 挂载静态文件目录
-    ports:
-      - "8000:8000"      # 映射 Daphne 服务端口
+      args:
+        PYTHON_BASE_IMAGE: ${PYTHON_BASE_IMAGE:-python:3.12-slim}
+    image: ncbcnet-web:latest
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - DJANGO_SETTINGS_MODULE=NCBCNet.settings
-    depends_on:
-      - db
-
-  nginx:
-    image: nginx:latest
-    container_name: nginx-proxy
-    ports:
-      - "80:80"          # 映射 Nginx HTTP 端口
-      - "443:443"        # 映射 Nginx HTTPS 端口
-    depends_on:
-      - web
+      APP_ENV: production
+      DEBUG: "false"
+      ENABLE_HTTPS_REDIRECT: "true"
+      DJANGO_SETTINGS_MODULE: NCBCNet.settings
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DB_ENGINE: postgresql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_URL: redis://redis:6379/1
+      STATIC_ROOT: /app/staticfiles
+      MEDIA_ROOT: /app/mediafiles
+      RUN_MIGRATIONS: "1"
+      RUN_COLLECTSTATIC: "1"
     volumes:
-      - ssl_data:/www/server/cert
+      - static_data:/app/staticfiles
+      - media_data:/app/mediafiles
+      - ./SECRET:/app/SECRET:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/', timeout=5)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # nginx now serves the built SPA (docker/nginx.Dockerfile) and reverse-proxies
+  # /api/ and /admin/ to the web service; /static/ and /media/ come from the
+  # shared named volumes. Starts only once the web service is healthy.
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - static_data:/var/www/static:ro
+      - media_data:/var/www/media:ro
 
   db:
-    image: mysql:8.0
-    container_name: mysql-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      MYSQL_ROOT_PASSWORD: {{ DB_ROOT_PASSWORD }}
-      MYSQL_DATABASE: {{ SERVER_DB_NAME}}
-      MYSQL_USER: {{ DB_USER_NAME}}
-      MYSQL_PASSWORD: {{ DB_USER_PASSWORD }}
-    ports:
-      - "3306:3306"      # 映射数据库服务端口
+      POSTGRES_DB: ${DB_NAME:-ncnetdb}
+      POSTGRES_USER: ${DB_USER:-ncnet}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dbuserpassword}
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # 后台任务 worker（阶段三）：同一镜像，运行 RQ worker 消费 Redis 队列。
+  # 用于 AI 调用、缩略图生成、通知推送、文件后处理等异步任务（core/tasks.py）。
+  worker:
+    build:
+      context: .
+      args:
+        PYTHON_BASE_IMAGE: ${PYTHON_BASE_IMAGE:-python:3.12-slim}
+    image: ncbcnet-web:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      DEBUG: "false"
+      DJANGO_SETTINGS_MODULE: NCBCNet.settings
+      DB_ENGINE: postgresql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_URL: redis://redis:6379/1
+      RUN_MIGRATIONS: "0"
+      RUN_COLLECTSTATIC: "0"
+    command: rq worker --with-scheduler
+    volumes:
+      - media_data:/app/mediafiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
-  db_data:                 # 使用数据卷持久化 MySQL 数据
+  db_data:
+  redis_data:
   static_data:
-  ssl_data:
+  media_data:

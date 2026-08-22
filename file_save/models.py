@@ -44,6 +44,12 @@ class Folder(models.Model):
         super().delete(*args, **kwargs)
 
 class UploadedFile(models.Model):
+    STATUS_CHOICES = [
+        ('processing', '处理中'),
+        ('done', '完成'),
+        ('failed', '失败'),
+    ]
+
     file = models.FileField(upload_to='uploads/')
     original_name = models.CharField(max_length=255)
     folder = models.ForeignKey(Folder, null=True, blank=True, on_delete=models.CASCADE, related_name='files')
@@ -51,6 +57,12 @@ class UploadedFile(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     file_size = models.BigIntegerField(default=0)
     share = models.BooleanField(default=False)
+    # 后处理状态（RQ worker 异步处理，默认 done 兼容存量记录）
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='done')
+    # 图片缩略图（后处理生成）
+    thumbnail = models.ImageField(upload_to='thumbnails/', blank=True)
+    # 文件校验和（完整性/去重）
+    sha256 = models.CharField(max_length=64, blank=True)
     
     class Meta:
         ordering = ['-uploaded_at']
