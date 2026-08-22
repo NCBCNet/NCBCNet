@@ -5,6 +5,7 @@ import {
 } from 'antd'
 import { ArrowLeftOutlined, InboxOutlined } from '@ant-design/icons'
 import api from '../services/api'
+import { useAuth } from '../store/authStore'
 import { useUpload } from '../store/uploadStore'
 
 const { Title, Text } = Typography
@@ -12,17 +13,24 @@ const { Dragger } = Upload
 
 function FileUpload() {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
   const { uploadFile } = useUpload()
   const [folders, setFolders] = useState([])
   const [folderId, setFolderId] = useState(undefined)
   const [uploading, setUploading] = useState(false)
 
-  // 载入顶层文件夹供选择（嵌套选择请进入云盘对应文件夹后使用快速上传）
+  // 未登录不可上传：直接引导登录
   useEffect(() => {
+    if (!isAuthenticated) {
+      message.warning('请先登录后上传文件')
+      navigate('/usermanage/login')
+      return
+    }
+    // 载入顶层文件夹供选择（嵌套选择请进入云盘对应文件夹后使用快速上传）
     api.get('/folders/')
       .then((res) => setFolders(res.data))
       .catch(() => {})
-  }, [])
+  }, [isAuthenticated, navigate])
 
   const handleUpload = async ({ file, onSuccess, onError }) => {
     setUploading(true)

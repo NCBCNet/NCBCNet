@@ -201,7 +201,7 @@ function ArticleList() {
                     {article.avatar && typeof article.avatar === 'string' && (
                       <Col xs={24} sm={5} md={4}>
                         <img
-                          src={article.avatar.startsWith('http') ? article.avatar : `/media/${article.avatar}`}
+                          src={article.avatar.startsWith('http') || article.avatar.startsWith('/') ? article.avatar : `/media/${article.avatar}`}
                           alt="avatar"
                           style={{ width: '100%', borderRadius: 12, maxHeight: 100, objectFit: 'cover' }}
                           onError={(e) => { e.target.style.display = 'none' }}

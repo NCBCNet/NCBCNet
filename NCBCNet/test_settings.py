@@ -20,6 +20,13 @@ CACHES = {
     }
 }
 
+# 测试环境放宽限流（同一测试进程同 IP 会多次登录，避免 429）
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+    'login': '100/min',
+    'register': '100/min',
+    'upload': '1000/min',
+}
+
 # Use database-backed sessions for testing
 SESSION_ENGINE='django.contrib.sessions.backends.db'
 

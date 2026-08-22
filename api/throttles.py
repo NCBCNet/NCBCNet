@@ -6,16 +6,15 @@
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 
+# rate 统一在 settings.REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] 配置，
+# 类只声明 scope，便于测试环境覆盖、生产环境按需调整。
 class LoginRateThrottle(AnonRateThrottle):
     scope = 'login'
-    rate = '5/min'
 
 
 class RegisterRateThrottle(AnonRateThrottle):
     scope = 'register'
-    rate = '3/min'
 
 
 class UploadRateThrottle(UserRateThrottle):
     scope = 'upload'
-    rate = '30/min'

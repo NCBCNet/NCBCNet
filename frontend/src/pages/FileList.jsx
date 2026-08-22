@@ -20,7 +20,7 @@ const ROOT_TREE_KEY = 'folder-root'
 
 function FileList() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const { uploadFile } = useUpload()
 
   // 当前浏览路径（从根目录开始的文件夹链），currentFolderId 由路径末位推导
@@ -143,10 +143,13 @@ function FileList() {
   // ---------- 初始化 ----------
 
   useEffect(() => {
-    fetchFolderContents([])
+    // 未登录：仅可查看共享文件（公开）；个人文件/文件夹树需登录
+    if (isAuthenticated) {
+      fetchFolderContents([])
+      buildTree()
+    }
     fetchSharedFiles()
-    buildTree()
-  }, [fetchFolderContents, fetchSharedFiles, buildTree])
+  }, [fetchFolderContents, fetchSharedFiles, buildTree, isAuthenticated])
 
   // ---------- 文件夹操作 ----------
 
@@ -289,6 +292,7 @@ function FileList() {
           <Title level={3} style={{ margin: 0 }}>云盘</Title>
           <Text type="secondary">文件存储与共享</Text>
         </div>
+        {isAuthenticated && (
         <Space>
           <Button icon={<FolderAddOutlined />} onClick={() => setCreateModalOpen(true)}>
             新建文件夹
@@ -302,10 +306,12 @@ function FileList() {
             上传文件
           </Button>
         </Space>
+        )}
       </div>
 
       <Row gutter={[16, 16]}>
-        {/* 左侧：文件夹树 + 快速上传 */}
+        {/* 左侧：文件夹树 + 快速上传（登录后可见） */}
+        {isAuthenticated && (
         <Col xs={24} lg={6}>
           <Card
             title="文件夹"
@@ -348,9 +354,12 @@ function FileList() {
             )}
           </Card>
         </Col>
+        )}
 
         {/* 右侧：面包屑 + 统计 + 文件网格 + 共享文件 */}
         <Col xs={24} lg={18}>
+          {isAuthenticated ? (
+            <>
           <Breadcrumb items={breadcrumbItems} style={{ marginBottom: 16 }} />
 
           {/* 统计卡片 */}
@@ -472,6 +481,12 @@ function FileList() {
               </div>
             )}
           </Spin>
+            </>
+          ) : (
+            <Card style={{ marginBottom: 24, borderRadius: 8 }}>
+              <Empty description="请登录后管理你的文件" style={{ padding: 40 }} />
+            </Card>
+          )}
 
           {/* 共享文件 */}
           <Card

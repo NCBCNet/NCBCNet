@@ -23,8 +23,10 @@ def list_folders(user, parent_id=None):
 
 
 def create_folder(user, name, parent=None):
-    """创建文件夹（事务内）。"""
+    """创建文件夹（事务内）；parent 必须属于当前用户，防止越权挂靠。"""
     with transaction.atomic():
+        if parent is not None and parent.owner_id != user.id:
+            raise PermissionDenied('无权在该文件夹下创建')
         return Folder.objects.create(owner=user, name=name, parent=parent)
 
 
@@ -50,13 +52,21 @@ def list_files(user, folder_id=None, shared=False):
 
 
 def list_shared_files(user):
-    """其他用户共享的文件列表。"""
-    return UploadedFile.objects.filter(share=True).exclude(owner=user)
+    """共享文件列表：登录用户排除其自己共享的；匿名用户可见全部共享文件。"""
+    queryset = UploadedFile.objects.filter(share=True)
+    if user.is_authenticated:
+        queryset = queryset.exclude(owner=user)
+    return queryset
 
 
 def upload_file(user, file_obj, folder=None, original_name=None, file_size=0):
-    """保存上传文件记录，并触发后处理（缩略图+SHA256，RQ 异步，不可用时同步兜底）。"""
+    """保存上传文件记录，并触发后处理（缩略图+SHA256，RQ 异步，不可用时同步兜底）。
+
+    folder 必须属于当前用户，防止把文件塞进他人文件夹。
+    """
     with transaction.atomic():
+        if folder is not None and folder.owner_id != user.id:
+            raise PermissionDenied('无权上传到该文件夹')
         uploaded = UploadedFile.objects.create(
             owner=user,
             file=file_obj,

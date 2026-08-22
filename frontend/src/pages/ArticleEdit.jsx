@@ -22,6 +22,7 @@ function ArticleEdit() {
   const [fetching, setFetching] = useState(true)
   const [columns, setColumns] = useState([])
   const [content, setContent] = useState('')
+  const [avatarFile, setAvatarFile] = useState(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -72,8 +73,8 @@ function ArticleEdit() {
       formData.append('content', content)
       if (values.column) formData.append('column', values.column)
       if (values.tags) formData.append('tags', values.tags)
-      if (values.avatar?.file?.originFileObj) {
-        formData.append('avatar', values.avatar.file.originFileObj)
+      if (avatarFile) {
+        formData.append('avatar', avatarFile)
       }
 
       await api.put(`/articles/${id}/update/`, formData, {
@@ -125,11 +126,11 @@ function ArticleEdit() {
             <Input placeholder="输入文章标题..." size="large" />
           </Form.Item>
 
-          <Form.Item label="标题图（留空则保持原图）" name="avatar">
+          <Form.Item label="标题图（留空则保持原图）">
             <Dragger
               accept="image/*"
               maxCount={1}
-              beforeUpload={() => false}
+              beforeUpload={(file) => { setAvatarFile(file); return false }}
               showUploadList={{ showPreviewIcon: false }}
             >
               <p className="ant-upload-drag-icon">

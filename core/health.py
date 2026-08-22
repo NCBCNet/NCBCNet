@@ -3,10 +3,17 @@
 供 API 健康端点与运维使用。输出只包含「状态 + 友好说明 + 耗时」，
 **绝不泄露**主机名、连接串、账号、错误堆栈等敏感内容。
 """
+import os
+import platform
 import time
 
+from django import get_version
+from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
+
+# 进程启动时间（用于 uptime 展示）
+_PROCESS_START = time.monotonic()
 
 
 def _elapsed(probe):
@@ -60,12 +67,43 @@ def check_storage():
     return _elapsed(_probe)
 
 
+def check_disk():
+    """探测媒体/工作目录所在磁盘的可用空间（脱敏：仅关心占比与可用量）。"""
+    def _probe():
+        try:
+            root = settings.MEDIA_ROOT or settings.BASE_DIR
+            if not os.path.isdir(root):
+                root = settings.BASE_DIR
+            usage = __import__('shutil').disk_usage(root)
+            percent = round((usage.used / usage.total) * 100, 1)
+            free_gb = usage.free // (1024 ** 3)
+            return True, f'磁盘可用 {free_gb} GB（已用 {percent}%）'
+        except Exception:
+            return False, '磁盘状态异常'
+    return _elapsed(_probe)
+
+
+def check_runtime():
+    """探测运行时环境与进程运行时长（版本信息非敏感）。"""
+    def _probe():
+        uptime_s = int(time.monotonic() - _PROCESS_START)
+        uptime = f'{uptime_s}s' if uptime_s < 60 else f'{uptime_s // 60}min {uptime_s % 60}s'
+        return True, f'Python {platform.python_version()} · Django {get_version()} · 运行 {uptime}'
+    return _elapsed(_probe)
+
+
 def run_all_checks():
-    """返回所有组件健康状态（脱敏）。"""
+    """返回所有组件健康状态（脱敏，含运行环境信息）。"""
     components = {
         'database': check_database(),
         'cache': check_cache(),
         'storage': check_storage(),
+        'disk': check_disk(),
+        'runtime': check_runtime(),
     }
     overall = 'ok' if all(c['status'] == 'ok' for c in components.values()) else 'degraded'
-    return {'status': overall, 'components': components}
+    return {
+        'status': overall,
+        'checked_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+        'components': components,
+    }

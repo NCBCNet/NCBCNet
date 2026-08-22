@@ -20,6 +20,7 @@ function ArticleCreate() {
   const [loading, setLoading] = useState(false)
   const [columns, setColumns] = useState([])
   const [content, setContent] = useState('')
+  const [avatarFile, setAvatarFile] = useState(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -51,8 +52,8 @@ function ArticleCreate() {
       formData.append('content', content)
       if (values.column) formData.append('column', values.column)
       if (values.tags) formData.append('tags', values.tags)
-      if (values.avatar?.file?.originFileObj) {
-        formData.append('avatar', values.avatar.file.originFileObj)
+      if (avatarFile) {
+        formData.append('avatar', avatarFile)
       }
 
       const res = await api.post('/articles/create/', formData, {
@@ -100,11 +101,11 @@ function ArticleCreate() {
             <Input placeholder="输入文章标题..." size="large" />
           </Form.Item>
 
-          <Form.Item label="标题图" name="avatar">
+          <Form.Item label="标题图">
             <Dragger
               accept="image/*"
               maxCount={1}
-              beforeUpload={() => false}
+              beforeUpload={(file) => { setAvatarFile(file); return false }}
               showUploadList={{ showPreviewIcon: false }}
             >
               <p className="ant-upload-drag-icon">

@@ -110,9 +110,9 @@ class FileShareToggleView(APIView):
 
 
 class SharedFileListView(generics.ListAPIView):
-    """共享文件列表（其他用户共享的文件，不分页）"""
+    """共享文件列表（其他用户共享的文件，不分页；公开可访问）。"""
     serializer_class = FileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     pagination_class = None
 
     def get_queryset(self):
@@ -120,13 +120,22 @@ class SharedFileListView(generics.ListAPIView):
 
 
 class FileDownloadUrlView(APIView):
-    """获取私有文件的签名下载链接（对象级授权：仅所有者或共享文件可见者）。"""
+    """获取签名下载链接。
 
-    permission_classes = [permissions.IsAuthenticated]
+    共享文件公开可下载（匿名亦可）；私有文件仅所有者（需登录）。
+    """
+
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request, pk):
-        # 对象级授权：所有者或共享文件（服务层校验）
-        file_instance = get_downloadable_file(request.user, pk)
+        file_instance = get_file(pk)
+
+        # 私有文件：仅所有者；共享文件：任何人
+        if not file_instance.share:
+            if not request.user.is_authenticated:
+                raise PermissionDenied('请先登录后下载私有文件')
+            if file_instance.owner_id != request.user.id:
+                raise PermissionDenied('无权下载该文件')
 
         exp = int(time.time()) + DOWNLOAD_LINK_TTL
         token = _sign_download(pk, exp)

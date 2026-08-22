@@ -148,6 +148,12 @@ if DAPHNEON_IN_DEBUG:
 ROOT_URLCONF = 'NCBCNet.urls'
 
 # Django REST Framework
+# DRF 渲染器：默认仅 JSON。Browsable API 仅当「开发环境(DEBUG)且显式设置 ENABLE_BROWSABLE_API=true」时启用，
+# 生产环境无论如何都不会启用，避免把 DRF 错误页暴露给用户。
+_DRF_RENDERERS = ['rest_framework.renderers.JSONRenderer']
+if DEBUG and env_bool('ENABLE_BROWSABLE_API', False):
+    _DRF_RENDERERS.append('rest_framework.renderers.BrowsableAPIRenderer')
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'api.authentication.CookieJWTAuthentication',
@@ -155,6 +161,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
     ),
+    'DEFAULT_RENDERER_CLASSES': tuple(_DRF_RENDERERS),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
     'DATETIME_FORMAT': '%Y-%m-%d %H:%M:%S',

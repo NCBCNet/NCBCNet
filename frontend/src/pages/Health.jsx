@@ -9,6 +9,8 @@ const COMPONENT_LABELS = {
   database: '数据库',
   cache: '缓存',
   storage: '媒体存储',
+  disk: '磁盘',
+  runtime: '运行环境',
 }
 
 function Health() {
@@ -28,15 +30,20 @@ function Health() {
 
   const components = data?.components || {}
   const overall = data?.status
+  const checkedAt = data?.checked_at
+  const total = Object.keys(COMPONENT_LABELS).length
+  const okCount = Object.keys(COMPONENT_LABELS)
+    .filter((k) => components[k]?.status === 'ok').length
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto' }}>
+    <div style={{ maxWidth: 760, margin: '0 auto' }}>
       <Title level={3} style={{ marginBottom: 8 }}>网站状态</Title>
-      <Text type="secondary">各模块实时健康状态</Text>
+      <Text type="secondary">各模块实时健康状态与运行信息</Text>
 
       <Result
         status={overall === 'ok' ? 'success' : 'error'}
         title={overall === 'ok' ? '所有组件运行正常' : '部分组件异常'}
+        subTitle={`运行正常 ${okCount}/${total} 个组件 ${checkedAt ? `· 检查于 ${checkedAt}` : ''}`}
         style={{ padding: '24px 0 0' }}
       />
 
@@ -64,7 +71,7 @@ function Health() {
                 >
                   {c?.message || '未知'}
                 </Tag>
-                {c?.latency_ms != null && (
+                {c?.latency_ms != null && c?.latency_ms > 0 && (
                   <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
                     {c.latency_ms} ms
                   </Text>
@@ -73,6 +80,13 @@ function Health() {
             </div>
           )
         })}
+      </Card>
+
+      <Card title="说明" style={{ borderRadius: 8, marginTop: 16 }}>
+        <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.8 }}>
+          本页面仅展示各组件的健康状态与运行概要，不涉及敏感内部信息。
+          如需更详细的系统指标或日志，请在服务器上通过监控工具查看。
+        </Text>
       </Card>
     </div>
   )
