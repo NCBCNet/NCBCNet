@@ -11,7 +11,7 @@
 ## 0. 实现状态（v0.2 落地清单）
 
 - **M1 纯 SPA 前后端分离**：`docker/nginx.Dockerfile` 构建期产出 SPA，Nginx 服务 SPA 静态 + `/api/` 反代；`/api/v1/` 契约、统一错误、`/api/v1/health/`、DRF 限流、CSP、移除 CORS、`.env.example`、依赖清理均已落地。
-- **M2 模块化单体**：`core` 共享内核 + 各 app `services.py`；`comment` 已并入 `article`（`db_table='comment_comment'` 保留原表）；`api` 收口为薄适配层且零业务 model 依赖；`pyproject.toml` import-linter 契约 + AST 边界测试。
+- **M2 模块化单体**：`core` 共享内核 + 各 app `services.py`；`comment` 已并入 `article`（`db_table='comment_comment'` 保留原表）；`api` 收口为薄适配层且零业务 model 依赖；边界由 `api/tests.py` 的 **AST 边界测试**守护（import-linter 因顶层包无根包而弃用）。
 - **M3 配置/脚本**：`django-storages` S3 兼容存储配置、`migrate_media_to_oss` 命令、`deploy/backup.sh`、RQ `worker`（`core/tasks.py` + Compose 服务）、日志/密钥/健康检查规范。
 - **授权访问**：HttpOnly Cookie JWT（`nc_access`/`nc_refresh`）+ CSRF + 私有文件 **HMAC 签名短链**下载（见 `SECURITY.md`）。
 
@@ -350,7 +350,11 @@ class FileListView(generics.ListAPIView):
 
 ### 5.6 强制工具与 CI
 
-引入 [import-linter](https://github.com/seddonym/import-linter)，在 `pyproject.toml` 声明契约：
+> **落地说明（2026）**：本项目应用均为顶层平级包（`api/`、`article/` … 并列于仓库根目录），
+> 不存在 import-linter 所需的「根包」，`root_package` 无法适配，**最终弃用 import-linter**。
+> 「api 不得导入业务 models」由 `api/tests.py` 的 `ApiBoundaryTests`（AST 扫描）在 Django 测试中强制执行。
+
+~~引入 [import-linter](https://github.com/seddonym/import-linter)，在 `pyproject.toml` 声明契约~~（已弃用，保留原方案作参考）：
 
 ```toml
 [tool.importlinter]
@@ -397,7 +401,7 @@ CI（`.github/workflows/docker-image.yml` 的 backend-tests job）追加：
 
 ### 5.8 验收标准
 
-- [ ] 仓库内不存在 `api → 业务 models` 的 import（`lint-imports` 通过）。
+- [ ] 仓库内不存在 `api → 业务 models` 的 import（`api/tests.py` AST 边界测试通过）。
 - [ ] 不存在 `article ↔ comment` 互相 import。
 - [ ] 每个业务 app 都有 `services.py`，且视图无直接 ORM 查询（除 `get_queryset` 委托服务的薄封装）。
 - [ ] 事务/权限逻辑集中在 services，行为与改造前一致（测试套件覆盖）。
