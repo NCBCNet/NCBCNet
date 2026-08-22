@@ -33,14 +33,16 @@ class FileSerializer(serializers.ModelSerializer):
     owner_username = serializers.CharField(source='owner.username', read_only=True)
     file_size_display = serializers.SerializerMethodField()
     download_url = serializers.SerializerMethodField()
+    thumbnail_url = serializers.SerializerMethodField()
 
     class Meta:
         model = UploadedFile
         fields = [
             'id', 'file', 'original_name', 'folder', 'owner', 'owner_username',
-            'uploaded_at', 'file_size', 'file_size_display', 'share', 'download_url'
+            'uploaded_at', 'file_size', 'file_size_display', 'share', 'download_url',
+            'status', 'sha256', 'thumbnail_url',
         ]
-        read_only_fields = ['id', 'owner', 'uploaded_at', 'file_size']
+        read_only_fields = ['id', 'owner', 'uploaded_at', 'file_size', 'status', 'sha256']
 
     def get_file_size_display(self, obj):
         return obj.get_file_size_display()
@@ -50,6 +52,15 @@ class FileSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(f'/file_up/file_download/{obj.id}/')
         return f'/file_up/file_download/{obj.id}/'
+
+    def get_thumbnail_url(self, obj):
+        if obj.thumbnail:
+            request = self.context.get('request')
+            url = obj.thumbnail.url
+            if request and not url.startswith('http'):
+                return request.build_absolute_uri(url)
+            return url
+        return None
 
 
 class FileUploadSerializer(serializers.ModelSerializer):

@@ -1,5 +1,6 @@
 # NCBCNet 开发与部署说明
 
+> ⚠️ 本文档已合并进 **[`GUIDE.md`](./GUIDE.md)（统一操作指南）**，请以 GUIDE.md 为准。
 > 关联：`ARCHITECTURE_ROADMAP.md`（架构路线）、`FRONTEND_MIGRATION_PLAN.md`（前端计划）、`SECURITY.md`（安全模型）。
 
 ## 1. 总体原则

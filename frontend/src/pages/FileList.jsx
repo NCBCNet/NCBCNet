@@ -440,7 +440,16 @@ function FileList() {
                     ]}
                   >
                     <div style={{ textAlign: 'center' }}>
-                      <FileOutlined style={{ fontSize: 40, color: '#6f42c1' }} />
+                      {file.thumbnail_url ? (
+                        <img
+                          src={file.thumbnail_url}
+                          alt=""
+                          style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }}
+                          onError={(e) => { e.target.style.display = 'none' }}
+                        />
+                      ) : (
+                        <FileOutlined style={{ fontSize: 40, color: '#6f42c1' }} />
+                      )}
                       <div style={{ marginTop: 8 }}>
                         <Text strong ellipsis={{ tooltip: file.original_name }} style={{ maxWidth: '100%', display: 'block' }}>
                           {file.original_name}
@@ -450,6 +459,9 @@ function FileList() {
                         <Text type="secondary" style={{ fontSize: 12 }}>
                           {file.file_size_display || formatSize(file.file_size)}
                         </Text>
+                        {file.status === 'processing' && (
+                          <Tag color="processing" style={{ marginLeft: 6, fontSize: 12 }}>处理中</Tag>
+                        )}
                         {file.share && (
                           <Tag color="purple" style={{ marginLeft: 6, fontSize: 12 }}>已共享</Tag>
                         )}

@@ -29,14 +29,13 @@ def ping_worker():
 
 
 def process_uploaded_file(file_id):
-    """上传后处理任务（预留脚手架，阶段三 worker）。
+    """上传后处理任务（阶段三 worker）：图片生成缩略图 + 计算 SHA256。
 
-    当前上传流程无后处理环节，此任务为「上传后处理」预留入口：
-    后续可在此实现缩略图生成、病毒扫描、转码、索引等耗时操作，
-    由 FileUploadView 在上传完成后 `get_queue().enqueue(process_uploaded_file, file_id)` 入队。
-
-    注意：文件「传输」无法后台化（必须由浏览器同步发出），只有「后处理」能入队。
+    由 file_save.services.upload_file 在上传保存后入队；RQ/Redis 不可用时同步兜底执行。
+    文件「传输」无法后台化（必须由浏览器同步发出），只有「后处理」能入队。
     """
+    import hashlib
+
     from file_save.models import UploadedFile
 
     try:
@@ -44,7 +43,51 @@ def process_uploaded_file(file_id):
     except UploadedFile.DoesNotExist:
         logger.warning("process_uploaded_file: file %s not found", file_id)
         return
-    # TODO(阶段三): 在此实现真实后处理（缩略图/扫描/转码等）
-    logger.info("process_uploaded_file: file %s (%s) queued for post-processing",
-                file_id, uploaded.original_name)
-    return file_id
+
+    try:
+        # 1) SHA256（分块读取，避免整文件入内存）
+        sha = hashlib.sha256()
+        with uploaded.file.open('rb') as fh:
+            for chunk in iter(lambda: fh.read(1024 * 1024), b''):
+                sha.update(chunk)
+        uploaded.sha256 = sha.hexdigest()
+
+        # 2) 图片缩略图（仅图片）
+        if _is_image(uploaded.original_name):
+            _generate_thumbnail(uploaded)
+
+        uploaded.status = 'done'
+        uploaded.save(update_fields=['status', 'sha256', 'thumbnail'])
+        logger.info("process_uploaded_file: %s done", file_id)
+    except Exception:
+        logger.exception("process_uploaded_file: %s failed", file_id)
+        UploadedFile.objects.filter(pk=file_id).update(status='failed')
+
+
+def _is_image(name):
+    """按扩展名判断是否为图片。"""
+    ext = (name or '').rsplit('.', 1)[-1].lower() if '.' in (name or '') else ''
+    return ext in {'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'}
+
+
+def _generate_thumbnail(uploaded, size=(200, 200)):
+    """为图片生成 JPEG 缩略图并写入 thumbnail 字段（失败则跳过，不影响状态）。"""
+    import io
+
+    from django.core.files.base import ContentFile
+    from PIL import Image
+
+    try:
+        with Image.open(uploaded.file.path) as img:
+            img = img.convert('RGB')
+            img.thumbnail(size, Image.Resampling.LANCZOS)
+            buf = io.BytesIO()
+            img.save(buf, format='JPEG', quality=85)
+    except Exception:
+        return
+
+    uploaded.thumbnail.save(
+        f'thumb_{uploaded.pk}.jpg',
+        ContentFile(buf.getvalue()),
+        save=False,
+    )

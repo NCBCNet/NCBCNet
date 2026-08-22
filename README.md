@@ -14,9 +14,9 @@
 前后端分离：React 19 + Ant Design 6 SPA（Vite 7 构建），Django + DRF 提供 `/api/v1/` REST API。
 认证采用 **HttpOnly Cookie JWT + CSRF**，私有文件下载采用 **HMAC 签名短链**。详见：
 
+- 📖 **[`docs/GUIDE.md`](docs/GUIDE.md) —— 统一操作指南（从这里开始）**
 - [`docs/ARCHITECTURE_ROADMAP.md`](docs/ARCHITECTURE_ROADMAP.md) —— 架构路线（M1/M2/M3）
-- [`docs/FRONTEND_MIGRATION_PLAN.md`](docs/FRONTEND_MIGRATION_PLAN.md) —— 前端改造计划
-- [`docs/DEVELOPMENT_AND_DEPLOYMENT_GUIDE.md`](docs/DEVELOPMENT_AND_DEPLOYMENT_GUIDE.md) —— 开发/部署手册
+- [`docs/FRONTEND_MIGRATION_PLAN.md`](docs/FRONTEND_MIGRATION_PLAN.md) —— 前端改造计划（历史）
 - [`SECURITY.md`](SECURITY.md) —— 安全模型
 
 ### 服务映射

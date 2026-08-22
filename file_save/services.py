@@ -55,15 +55,32 @@ def list_shared_files(user):
 
 
 def upload_file(user, file_obj, folder=None, original_name=None, file_size=0):
-    """保存上传文件记录（事务内）。"""
+    """保存上传文件记录，并触发后处理（缩略图+SHA256，RQ 异步，不可用时同步兜底）。"""
     with transaction.atomic():
-        return UploadedFile.objects.create(
+        uploaded = UploadedFile.objects.create(
             owner=user,
             file=file_obj,
             folder=folder,
             original_name=original_name or getattr(file_obj, 'name', ''),
             file_size=file_size,
+            status='processing',
         )
+
+    # 事务提交后再入队，避免 worker 抢在事务落库前读到记录
+    _dispatch_post_process(uploaded.id)
+    return uploaded
+
+
+def _dispatch_post_process(file_id):
+    """把后处理任务入队；RQ/Redis 不可用时同步兜底执行（开发环境无 worker）。"""
+    from core.tasks import process_uploaded_file
+
+    try:
+        from core.tasks import get_queue
+        get_queue().enqueue(process_uploaded_file, file_id)
+    except Exception:
+        # 开发未装 rq / 未起 Redis 时同步执行，保证缩略图与校验和照常
+        process_uploaded_file(file_id)
 
 
 def delete_file(user, file_id):

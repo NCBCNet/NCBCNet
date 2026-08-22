@@ -1,7 +1,8 @@
 # NCBCNet 后续工作与使用指南
 
+> ⚠️ 本文档已合并进 **[`GUIDE.md`](./GUIDE.md)（统一操作指南）**，请以 GUIDE.md 为准。
 > 本文档回答两件事：**改造完成后你还需要做什么**，以及**改造后的系统怎么用/怎么部署**。
-> 关联：`ARCHITECTURE_ROADMAP.md`、`FRONTEND_MIGRATION_PLAN.md`、`DEVELOPMENT_AND_DEPLOYMENT_GUIDE.md`、`SECURITY.md`。
+> 关联：`ARCHITECTURE_ROADMAP.md`、`FRONTEND_MIGRATION_PLAN.md`、`SECURITY.md`。
 
 ---
 
