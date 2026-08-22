@@ -14,7 +14,7 @@ const techStack = [
   { name: 'Django 6.0', type: '后端框架', color: '#092e20' },
   { name: 'Daphne 4.2', type: 'ASGI 服务器', color: '#6f42c1' },
   { name: 'DRF 3.16', type: 'API 框架', color: '#a30000' },
-  { name: 'MySQL 8.0', type: '数据库', color: '#4479a1' },
+  { name: 'PostgreSQL 16', type: '数据库', color: '#336791' },
   { name: 'Redis 7', type: '缓存', color: '#dc382d' },
   { name: 'React 19', type: '前端框架', color: '#61dafb' },
   { name: 'Ant Design 6', type: 'UI 库', color: '#1677ff' },

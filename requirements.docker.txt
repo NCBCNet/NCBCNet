@@ -73,7 +73,7 @@ zope.interface==8.2
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1
 fakeredis==2.32.0
-PyMySQL==1.1.1
+psycopg[binary]==3.2.9
 
 # 前后端分离 / 安全 / 模块化 新增
 drf-spectacular==0.30.0

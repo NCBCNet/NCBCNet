@@ -14,9 +14,9 @@ services:
       ENABLE_HTTPS_REDIRECT: "true"
       DJANGO_SETTINGS_MODULE: NCBCNet.settings
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
-      DB_ENGINE: mysql
+      DB_ENGINE: postgresql
       DB_HOST: db
-      DB_PORT: 3306
+      DB_PORT: 5432
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -62,20 +62,18 @@ services:
       - media_data:/var/www/media:ro
 
   db:
-    image: mysql:8.0
+    image: postgres:16-alpine
     restart: unless-stopped
-    command: --default-authentication-plugin=mysql_native_password
     env_file:
       - .env
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-ncnetdb}
+      POSTGRES_USER: ${DB_USER:-ncnet}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dbuserpassword}
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -106,9 +104,9 @@ services:
       APP_ENV: production
       DEBUG: "false"
       DJANGO_SETTINGS_MODULE: NCBCNet.settings
-      DB_ENGINE: mysql
+      DB_ENGINE: postgresql
       DB_HOST: db
-      DB_PORT: 3306
+      DB_PORT: 5432
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}

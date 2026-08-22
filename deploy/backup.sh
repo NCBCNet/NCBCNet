@@ -12,13 +12,14 @@ KEEP_DAYS="${KEEP_DAYS:-14}"
 
 mkdir -p "${BACKUP_DIR}"
 
-# ---------- MySQL 备份 ----------
+# ---------- PostgreSQL 备份 ----------
 DB_DUMP="${BACKUP_DIR}/db_${STAMP}.sql.gz"
-echo "[backup] dumping MySQL ${DB_NAME}..."
-mysqldump \
-  -h "${DB_HOST}" -P "${DB_PORT:-3306}" \
-  -u "${DB_USER}" -p"${DB_PASSWORD}" \
-  --single-transaction --routines --triggers "${DB_NAME}" \
+echo "[backup] dumping PostgreSQL ${DB_NAME}..."
+# pg_dump 通过 PGPASSWORD 环境变量读取口令（无内联密码参数）
+PGPASSWORD="${DB_PASSWORD}" pg_dump \
+  -h "${DB_HOST}" -p "${DB_PORT:-5432}" \
+  -U "${DB_USER}" \
+  --format=plain --no-owner --no-privileges "${DB_NAME}" \
   | gzip > "${DB_DUMP}"
 
 # ---------- 媒体文件备份（本地卷 tar） ----------

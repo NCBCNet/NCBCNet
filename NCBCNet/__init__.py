@@ -1,5 +1,2 @@
-﻿try:
-    import pymysql
-    pymysql.install_as_MySQLdb()
-except Exception:
-    pass
+# NCBCNet project package.
+# (production database driver is psycopg; no DB shim is needed here.)

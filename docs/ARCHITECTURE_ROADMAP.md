@@ -42,7 +42,7 @@
 |---|---|---|
 | 前端 | React 19 + Ant Design 6 + Vite 7 + React Router 7 | SPA 已完成页面级开发，但**未接入生产** |
 | 后端 | Django（requirements 锁 6.0.2，README 标注 5.1.1）+ DRF 3.16 + SimpleJWT | 单体，ASGI/Daphne |
-| 数据库 | 开发 SQLite，生产 MySQL 8（Docker 容器） | 两套环境 schema 有漂移风险 |
+| 数据库 | 开发 SQLite，生产 PostgreSQL 16（Docker 容器） | 两套环境 schema 有漂移风险 |
 | 缓存/会话 | Redis 7 + django-redis（cache 后端会话） | 已就绪 |
 | 部署 | Docker Compose（nginx + web + db + redis），GHCR 镜像，GitHub Actions | 单机、命名卷存储媒体 |
 | 渲染 | 旧 MVT 模板（Bootstrap/jQuery）+ 新 SPA 并存 | 双前端、双认证 |
@@ -62,7 +62,7 @@
 | P2 | **双前端 + 双认证并存**：模板（session）与 SPA（JWT）路由同名 | [frontend/src/App.jsx](../frontend/src/App.jsx) 路由 `/usermanage/login`、`/file_up/file_list` 与 Django 模板 URL 重名；[api.js](../frontend/src/services/api.js) 用 `window.location.href` 整页跳转 |
 | P3 | **API 适配层直连业务 models，无边界**：`api/` 同时 import 4 个业务 app 的模型 | [api/views/articles.py](../api/views/articles.py)、[api/views/files.py](../api/views/files.py)、[api/views/comments.py](../api/views/comments.py) |
 | P4 | **article ↔ comment 循环依赖** | [article/views.py](../article/views.py) → comment；[comment/models.py](../comment/models.py) → article |
-| P5 | **异步名不副实**：ORM 走同步 mysqlclient，旧视图 `async def` + `sync_to_async`，新 DRF 视图全同步；大文件已由 nginx X-Accel 处理 | [file_save/views.py](../file_save/views.py)、`api/views` |
+| P5 | **异步名不副实**：ORM 走同步 psycopg，旧视图 `async def` + `sync_to_async`，新 DRF 视图全同步；大文件已由 nginx X-Accel 处理 | [file_save/views.py](../file_save/views.py)、`api/views` |
 | P6 | **无后台任务设施**：已引入 zhipuai（AI）但没有 worker/队列可执行 | [requirements.txt](../requirements.txt) |
 | P7 | **单机 + 本地卷存储**：媒体/静态在命名卷，无法横向扩展；无备份策略、web 无健康检查 | [docker-compose.yml](../docker-compose.yml) |
 | P8 | **依赖冗余与版本漂移**：channels/haystack/notifications 未使用；requirements 与 README 版本不一致；`.env.example` 缺失（文档却引用它） | [requirements.txt](../requirements.txt)、[README.md](../README.md) |
@@ -83,7 +83,7 @@ flowchart LR
     U["浏览器"] --> N["Nginx（TLS 终止 + SPA 静态资源 + /api 反代）"]
     N -->|"/ 静态 SPA"| D["frontend/dist"]
     N -->|"/api/ /admin/"| W["web：Django 单体（模块化边界）"]
-    W --> M[("托管 MySQL（RDS）")]
+    W --> M[("托管 PostgreSQL（RDS）")]
     W --> R[("Redis（缓存/会话/队列）")]
     W --> O[("对象存储（OSS/S3）")]
     Q["worker（RQ/ARQ，阶段三后期可选）"] --> R
@@ -410,7 +410,7 @@ CI（`.github/workflows/docker-image.yml` 的 backend-tests job）追加：
 ### 6.1 目标
 
 - 媒体文件从本地命名卷迁移到**对象存储**，解除"文件绑死在单机"的限制。
-- 数据库迁移到**托管 MySQL（RDS 类）**，获得自动备份与高可用能力。
+- 数据库迁移到**托管 PostgreSQL（RDS 类）**，获得自动备份与高可用能力。
 - Compose 保留单机形态，但具备多实例扩容与可恢复性。
 
 ### 6.2 对象存储接入规范
@@ -476,14 +476,14 @@ media/{user_id}/{uuid}{ext}
 
 **选型与规格**：
 
-- 阿里云 RDS MySQL 8.0（或腾讯云 CDB），1 核 2G 起步，云盘 + 双可用区（按预算可选）。
+- 阿里云 RDS PostgreSQL 16（或腾讯云 TencentDB for PostgreSQL），1 核 2G 起步，云盘 + 双可用区（按预算可选）。
 - 开启：自动备份（每日全量 + binlog）、白名单（仅服务器 EIP/内网）、SSL 连接。
 
 **Django 连接配置**：
 
 ```python
 DATABASES["default"].update({
-    "ENGINE": "django.db.backends.mysql",
+    "ENGINE": "django.db.backends.postgresql",
     "OPTIONS": {
         "ssl": {"ca": os.getenv("DB_SSL_CA", "/app/certs/rds-ca.pem")}
     },
@@ -492,7 +492,7 @@ DATABASES["default"].update({
 
 保持 `CONN_MAX_AGE = 3600`（已有）；如需更高并发再评估连接池（django-db-connection-pool），初期不引入。
 
-**迁移**：`manage.py dumpdata` 或 `mysqldump` 导出 → 导入 RDS → 校验行数/最新记录 → 切换 `DB_HOST` → 观察日志。切换窗口内建议只读维护页。
+**迁移**：`manage.py dumpdata` 或 `pg_dump` 导出 → 导入 RDS → 校验行数/最新记录 → 切换 `DB_HOST` → 观察日志。切换窗口内建议只读维护页。
 
 ### 6.6 Redis 与备份策略
 
@@ -501,8 +501,8 @@ DATABASES["default"].update({
 
 | 数据 | 备份方式 | 频率 | 恢复演练 |
 |---|---|---|---|
-| MySQL（托管） | RDS 自动备份 + binlog | 每日全量 + 实时 binlog | 季度 |
-| MySQL（额外） | `mysqldump \| gzip` → OSS 备份桶 | 每周 | 季度 |
+| PostgreSQL（托管） | RDS 自动备份 + WAL 归档（PITR） | 每日全量 + 实时 WAL | 季度 |
+| PostgreSQL（额外） | `pg_dump \| gzip` → OSS 备份桶 | 每周 | 季度 |
 | 媒体 | OSS 版本控制 + 生命周期 | 实时 | 抽查 |
 | Redis | 快照 + AOF | 每日 | 抽查 |
 | SECRET / .env | 云密钥管理或加密仓库 | 变更即备份 | 半年 |
@@ -510,7 +510,7 @@ DATABASES["default"].update({
 备份命令示例（放入 cron 或备份容器）：
 
 ```bash
-mysqldump -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" \
+PGPASSWORD="${DB_PASSWORD}" pg_dump -h "${DB_HOST}" -U "${DB_USER}" "${DB_NAME}" \
   | gzip > "/backup/db_$(date +%F).sql.gz"
 ossutil cp "/backup/db_$(date +%F).sql.gz" "oss://backup-bucket/db/"
 ```

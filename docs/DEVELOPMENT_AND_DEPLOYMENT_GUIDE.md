@@ -19,13 +19,13 @@
 | --- | --- |
 | Python 3.12 | Django 后端 |
 | Node.js 20+ | Vite 前端 |
-| MySQL 8 | 生产数据库（开发默认 SQLite，可跳过） |
+| PostgreSQL 16 | 生产数据库（开发默认 SQLite，可跳过） |
 | Redis 7 | 生产缓存/会话/队列（开发默认进程内缓存，可跳过） |
 
 ### 2.2 首次准备（开发零配置）
 
 ```bash
-# 只需装依赖；无需 .env、无需 MySQL/Redis（开发默认 SQLite + 进程内缓存）
+# 只需装依赖；无需 .env、无需 PostgreSQL/Redis（开发默认 SQLite + 进程内缓存）
 pip install -r requirements.txt
 cd frontend && npm install && cd ..
 ```
@@ -71,7 +71,7 @@ cd frontend && npm run build
                     ├─ /assets/ /  → frontend/dist（镜像内置）
                     ├─ /api/ /admin/ /mdeditor/ /ckeditor5/ → web:8000 (Daphne)
                     └─ /static/ /media/ → 命名卷
-web:8000 ──> MySQL、Redis
+web:8000 ──> PostgreSQL、Redis
 worker ──> Redis 队列（RQ）
 ```
 
@@ -87,7 +87,7 @@ worker ──> Redis 队列（RQ）
 docker compose up -d --build
 ```
 
-服务：`nginx`（80/443）、`web`（Daphne 内网）、`db`（MySQL）、`redis`、`worker`（RQ，可选）。
+服务：`nginx`（80/443）、`web`（Daphne 内网）、`db`（PostgreSQL）、`redis`、`worker`（RQ，可选）。
 
 - `web` 与 `nginx` 均为多阶段构建产物：`web` 用根 `Dockerfile`，`nginx` 用 `docker/nginx.Dockerfile`（构建期 `npm ci && npm run build`，运行时镜像自带 SPA）。
 - `web` 通过 `/api/v1/health/` 健康检查；`nginx` 依赖 `web` 健康后才启动。
@@ -129,18 +129,18 @@ GitHub Actions 流程：后端测试 + `lint-imports`（架构边界）→ 前�
 
 ### 5.1 备份
 
-`deploy/backup.sh`（建议 cron / systemd timer 每日执行）：MySQL `mysqldump | gzip` + 媒体卷 `tar`，可上传对象存储，按保留天数清理。
+`deploy/backup.sh`（建议 cron / systemd timer 每日执行）：PostgreSQL `pg_dump | gzip` + 媒体卷 `tar`，可上传对象存储，按保留天数清理。
 
 ```bash
 # 环境变量：DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD
 ./deploy/backup.sh
 ```
 
-备份矩阵见 `ARCHITECTURE_ROADMAP.md` 6.6（MySQL 托管自动备份 + 每周额外 dump、媒体 OSS 版本控制、Redis 快照、密钥离线备份）。
+备份矩阵见 `ARCHITECTURE_ROADMAP.md` 6.6（PostgreSQL 托管自动备份 + 每周额外 dump、媒体 OSS 版本控制、Redis 快照、密钥离线备份）。
 
 ### 5.2 恢复
 
-1. 数据库：`gunzip db_xxx.sql.gz | mysql -h ... -u ... -p ... <db>`
+1. 数据库：`gunzip db_xxx.sql.gz | psql -h ... -U ... <db>`
 2. 媒体：`tar -xzf media_xxx.tar.gz -C <MEDIA_ROOT>`
 3. 建议季度演练一次恢复流程。
 

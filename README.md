@@ -28,7 +28,7 @@
 | 生产 | nginx | 80/443 | TLS 终止 + SPA 静态 + `/api` 反代 |
 | 生产 | web (Daphne) | 内网 | Django ASGI |
 | 生产 | worker (RQ) | 内网 | 后台异步任务（可选） |
-| 生产 | db (MySQL) / redis | 内网 | 数据 / 缓存会话队列 |
+| 生产 | db (PostgreSQL) / redis | 内网 | 数据 / 缓存会话队列 |
 
 ## 配置
 
@@ -82,7 +82,7 @@ push 后构建并推送两个镜像到 GHCR（`ncbcnet-web`、`ncbcnet-nginx`）
 
 - 媒体可迁移到 S3 兼容对象存储：配置 `OSS_*` 环境变量后执行
   `python manage.py migrate_media_to_oss --dry-run`。
-- 备份：`deploy/backup.sh`（MySQL dump + 媒体 tar + 可选对象存储上传）。
+- 备份：`deploy/backup.sh`（PostgreSQL dump + 媒体 tar + 可选对象存储上传）。
 
 ## 说明
 

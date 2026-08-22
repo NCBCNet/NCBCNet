@@ -289,19 +289,19 @@ WSGI_APPLICATION = 'NCBCNet.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-# 生产环境使用MySQL数据库，开发环境使用SQLite数据库
+# 生产环境使用PostgreSQL数据库，开发环境使用SQLite数据库
 
-db_engine = os.getenv('DB_ENGINE', 'sqlite' if DEBUG else 'mysql').lower()
-if SQL_DEBUG or db_engine == 'mysql':
+db_engine = os.getenv('DB_ENGINE', 'sqlite' if DEBUG else 'postgresql').lower()
+if SQL_DEBUG or db_engine == 'postgresql':
     default_db_host = '127.0.0.1' if DEBUG else 'db'
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
+            'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.getenv('DB_NAME', 'ncnetdb'),
             'USER': os.getenv('DB_USER', 'ncnet'),
             'PASSWORD': os.getenv('DB_PASSWORD', 'dbuserpassword'),
             'HOST': os.getenv('DB_HOST', default_db_host),
-            'PORT': os.getenv('DB_PORT', '3306'),
+            'PORT': os.getenv('DB_PORT', '5432'),
         }
     }
 else:

@@ -13,7 +13,7 @@
 | --- | --- |
 | 前端 | React 19 + Ant Design 6 + Vite 7 + React Router 7（纯 SPA） |
 | 后端 | Django 6.0.2 + DRF 3.16 + SimpleJWT（Cookie 认证） |
-| 数据库 | 开发 SQLite / 生产 MySQL 8 |
+| 数据库 | 开发 SQLite / 生产 PostgreSQL 16 |
 | 缓存/队列 | 开发进程内缓存 / 生产 Redis 7 + RQ |
 | 部署 | 单机 Docker Compose（nginx + web + db + redis + worker） |
 
@@ -22,7 +22,7 @@
                     ├─ / /assets/  → SPA（镜像内置）
                     ├─ /api/ /admin/ /mdeditor/ /ckeditor5/ → web:8000 (Daphne)
                     └─ /static/ /media/ → 命名卷
-web:8000 ──> MySQL、Redis
+web:8000 ──> PostgreSQL、Redis
 worker(RQ) ──> Redis 队列
 ```
 
@@ -30,7 +30,7 @@ worker(RQ) ──> Redis 队列
 
 ## 2. 快速开始
 
-### 2.1 本地开发（零配置，不需要 .env / MySQL / Redis）
+### 2.1 本地开发（零配置，不需要 .env / PostgreSQL / Redis）
 
 ```bash
 pip install -r requirements.txt
@@ -103,7 +103,7 @@ docker compose up -d --build
 | `DJANGO_SECRET_KEY` | 开发默认 | **必填**（否则拒绝启动） |
 | `ALLOWED_HOSTS` | `*` | **必填**（不允许 `*`） |
 | `CSRF_TRUSTED_ORIGINS` | 自动 localhost:5173/8000 | 填真实域名 |
-| `DB_ENGINE` / `DB_*` | `sqlite`（无需配置） | `mysql`（必填） |
+| `DB_ENGINE` / `DB_*` | `sqlite`（无需配置） | `postgresql`（必填） |
 | `REDIS_URL` | 进程内缓存 | 默认 `redis://redis:6379/1` |
 | `ENABLE_HTTPS_REDIRECT` / `AUTH_COOKIE_SECURE` | `false` | `true` |
 | `OSS_*` | 本地磁盘 | 可选（对象存储） |
@@ -201,7 +201,7 @@ rq worker                       # 开发（需本机 Redis）
 ### 7.4 备份
 
 ```bash
-./deploy/backup.sh              # MySQL dump + 媒体 tar + 可选对象存储上传
+./deploy/backup.sh              # PostgreSQL dump + 媒体 tar + 可选对象存储上传
 # 建议 cron / systemd timer 每日执行；季度做一次恢复演练
 ```
 

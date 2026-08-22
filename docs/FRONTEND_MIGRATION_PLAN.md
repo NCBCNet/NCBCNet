@@ -62,7 +62,7 @@ graph LR
         D --> F[模板视图 /article/* 等]
     end
     subgraph 数据层
-        G[(MySQL)] 
+        G[(PostgreSQL)] 
         H[(Redis)]
         I[(Media 文件)]
     end
