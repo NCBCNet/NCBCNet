@@ -1,5 +1,8 @@
 [tool.importlinter]
-root_package = "NCBCNet"
+# 注意：api/article 等应用在项目根目录（顶层包，非 NCBCNet 子包），故不设置 root_package。
+# import-linter 通过 importlib 定位这些顶层包，需把项目根目录加入 sys.path：
+#   运行：PYTHONPATH=. lint-imports
+# （CI 已在 docker-image.yml 中加 PYTHONPATH=.）
 
 [[tool.importlinter.contracts]]
 name = "api 不得导入业务应用的 models（分层边界）"

@@ -23,7 +23,7 @@ jobs:
       - name: Install import-linter
         run: pip install import-linter
       - name: Lint import contracts
-        run: lint-imports
+        run: PYTHONPATH=. lint-imports
       - name: Run Django tests
         run: python manage.py test --settings=NCBCNet.test_settings
 

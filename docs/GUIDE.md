@@ -235,6 +235,7 @@ docker compose exec web python manage.py migrate_media_to_oss
 - **本机测试报 `WinError 5`**：DSH 沙箱禁止写平台临时目录（测试把 MEDIA_ROOT 指向临时目录）；正常开发机/CI 无此问题。
 - **admin 与 SPA 登录独立**：`/admin/` 用 Session，SPA 用 Cookie JWT，需分别登录。
 - **上传后一直「处理中」**：worker 未运行或 Redis 不可用。生产 `docker compose ps` 确认 worker 在跑；开发未装 rq 时走同步兜底应很快完成。
+- **`lint-imports` 报 `Module 'api' does not exist`**：应用是顶层包，import-linter 需项目根目录在 `sys.path`。请用 `PYTHONPATH=. lint-imports`（CI 已配置）。
 
 ---
 
