@@ -1,14 +1,8 @@
-[tool.importlinter]
-root_package = "NCBCNet"
-
-[[tool.importlinter.contracts]]
-name = "api 不得导入业务应用的 models（分层边界）"
-type = "forbidden"
-source_modules = ["api"]
-forbidden_modules = ["article.models", "file_save.models", "usermanage.models", "study.models"]
-
-[[tool.importlinter.contracts]]
-name = "NCBCNet 分层（api 最顶层，core 共享内核最底层）"
-type = "layers"
-# 注意：import-linter 的 layers 列表第一项为「最高层」，最后一项为「最低层」。
-layers = ["api", "server", "study", "article", "file_save", "usermanage", "core"]
+# NCBCNet
+#
+# 架构边界契约说明：
+# - 曾尝试用 import-linter 守护「api 不得导入业务 models」，
+#   但本项目应用均为顶层平级包（api/ article/ file_save/ ... 并列于仓库根目录），
+#   不存在 import-linter 所需的「根包」（root_package），无法适配。
+# - 该约束已由 api/tests.py 的 ApiBoundaryTests（AST 扫描 import）强制执行，
+#   并在 CI 的 Django 测试中运行。
