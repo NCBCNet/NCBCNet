@@ -69,7 +69,7 @@ webencodings==0.5.1
 whitenoise==6.11.0
 zope.interface==8.2
 
-djangorestframework==3.16.1
+djangorestframework==3.17.2
 djangorestframework-simplejwt==5.5.1
 fakeredis==2.32.0
 psycopg[binary]==3.2.9
