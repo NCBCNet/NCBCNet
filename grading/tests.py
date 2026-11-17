@@ -145,6 +145,13 @@ class GradingWorkflowTests(TestCase):
         response = client.get(reverse("my-assignments"))
         self.assertEqual(response.status_code, 403)
 
+    def test_teacher_group_has_grading_permission(self):
+        permission = self.user.user_permissions.model.objects.get(
+            codename="grade_answers",
+            content_type__app_label="grading",
+        )
+        self.assertTrue(self.teacher_group.permissions.filter(pk=permission.pk).exists())
+
     def test_admin_can_manage_teacher_profile(self):
         admin = get_user_model().objects.create_superuser(
             username="profile-admin", password="test-password", email="profile@example.com"
