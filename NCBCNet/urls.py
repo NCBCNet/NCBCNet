@@ -31,6 +31,7 @@ urlpatterns = [
 
     # 前后端分离 API（v1）
     path('api/v1/', include('api.urls')),
+    path('api/v1/grading/', include('grading.urls')),
 ]
 
 # OpenAPI 文档（drf-spectacular，可选依赖）
