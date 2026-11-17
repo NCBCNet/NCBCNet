@@ -118,6 +118,7 @@ INSTALLED_APPS = [
     # 'notifications',
     'mdeditor',
     'api',
+    'grading',
 ]
 
 # OpenAPI 文档（drf-spectacular，可选依赖；未安装时自动跳过）

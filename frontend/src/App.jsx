@@ -35,6 +35,8 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 const Forbidden = lazy(() => import('./pages/Forbidden'))
 const ServerError = lazy(() => import('./pages/ServerError'))
 const Health = lazy(() => import('./pages/Health'))
+const GradingWorkbench = lazy(() => import('./pages/GradingWorkbench'))
+const GradingOperations = lazy(() => import('./pages/GradingOperations'))
 
 const { Header, Content, Footer } = Layout
 
@@ -72,6 +74,8 @@ function App() {
     { key: '/article', label: '论坛', icon: <ReadOutlined /> },
     { key: '#', label: '学习', icon: <ReadOutlined /> },
     { key: '/file_up/file_list', label: '云盘', icon: <CloudOutlined /> },
+    { key: '/grading/workbench', label: '教师评卷', icon: <EditOutlined /> },
+    { key: '/grading/operations', label: '评卷运营', icon: <SettingOutlined /> },
     { key: '/server/about', label: '关于', icon: <InfoCircleOutlined /> },
   ]
 
@@ -197,6 +201,8 @@ function App() {
               <Route path="/usermanage/profile/:id" element={<Profile />} />
               <Route path="/server/about" element={<About />} />
               <Route path="/health" element={<Health />} />
+              <Route path="/grading/workbench" element={<GradingWorkbench />} />
+              <Route path="/grading/operations" element={<GradingOperations />} />
               <Route path="/403" element={<Forbidden />} />
               <Route path="/500" element={<ServerError />} />
               <Route path="/404" element={<NotFound />} />
